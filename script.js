@@ -6,12 +6,12 @@ class App {
         this.chart = null;
         this.rainTriggered = false;
         
-        // Tutorial Steps configuration
         this.tutStep = 0;
         this.tutContent = [
             { t: "Welcome!", d: "Welcome to Finance Master! Your personal wealth manager.", i: "fas fa-hand-holding-usd" },
             { t: "Dashboard", d: "Track your Net Worth and expenses in real-time here.", i: "fas fa-chart-line" },
-            { t: "Add Data", d: "Use the 'New Transaction' card to add Income or Expenses.", i: "fas fa-plus-circle" },
+            { t: "Add Data", d: "Go to 'Add Transaction' in the menu to add new Income or Expenses.", i: "fas fa-plus-circle" },
+            { t: "History", d: "View all your past records in the History tab.", i: "fas fa-list" },
             { t: "Win Rewards", d: "Reach $2,000 Net Worth to unlock Pro status!", i: "fas fa-trophy" }
         ];
 
@@ -25,46 +25,36 @@ class App {
             this.showAuth();
         }
 
-        // Event Listeners
         document.getElementById('loginForm').addEventListener('submit', e => { e.preventDefault(); this.login(); });
         document.getElementById('registerForm').addEventListener('submit', e => { e.preventDefault(); this.register(); });
         document.getElementById('addForm').addEventListener('submit', e => { e.preventDefault(); this.addTx(); });
         document.getElementById('profileForm').addEventListener('submit', e => { e.preventDefault(); this.updateProfile(); });
     }
 
-    // === TUTORIAL LOGIC ===
+    // === TUTORIAL ===
     checkTutorial() {
         if (!this.currentUser.hasSeenTutorial) {
             document.getElementById('tutorialOverlay').classList.remove('hidden');
             this.renderTutorial();
         }
     }
-
     renderTutorial() {
         const c = this.tutContent[this.tutStep];
         document.getElementById('tutTitle').innerText = c.t;
         document.getElementById('tutDesc').innerText = c.d;
         document.getElementById('tutImage').innerHTML = `<i class="${c.i}"></i>`;
-        
         const dots = document.querySelectorAll('.dot');
         dots.forEach((d, i) => d.className = i === this.tutStep ? 'dot active' : 'dot');
     }
-
     nextStep() {
         this.tutStep++;
-        if (this.tutStep >= this.tutContent.length) {
-            this.endTutorial();
-        } else {
-            this.renderTutorial();
-        }
+        if (this.tutStep >= this.tutContent.length) this.endTutorial(); else this.renderTutorial();
     }
-
     endTutorial() {
         document.getElementById('tutorialOverlay').classList.add('hidden');
         this.currentUser.hasSeenTutorial = true;
         this.updateUserRecord();
     }
-
     updateUserRecord() {
         const idx = this.users.findIndex(u => u.username === this.currentUser.username);
         if (idx > -1) this.users[idx] = this.currentUser;
@@ -77,19 +67,16 @@ class App {
         document.getElementById('loginCard').classList.toggle('hidden', view === 'register');
         document.getElementById('registerCard').classList.toggle('hidden', view !== 'register');
     }
-
     register() {
         const u = document.getElementById('regUser').value;
         const p = document.getElementById('regPass').value;
         if (this.users.find(x => x.username === u)) return alert('Username exists!');
-        
         const newUser = { username: u, password: p, hasSeenTutorial: false };
         this.users.push(newUser);
         localStorage.setItem('fm_users', JSON.stringify(this.users));
         alert('Success! Login now.');
         this.toggleAuth('login');
     }
-
     login() {
         const u = document.getElementById('loginUser').value;
         const p = document.getElementById('loginPass').value;
@@ -100,25 +87,21 @@ class App {
             this.loadDashboard();
         } else alert('Invalid credentials!');
     }
-
     logout() { sessionStorage.removeItem('fm_current'); location.reload(); }
-
     showAuth() {
         document.getElementById('authScreen').classList.remove('hidden');
         document.getElementById('dashboardScreen').classList.add('hidden');
         document.getElementById('bgVideo').play().catch(e => console.log('Autoplay blocked'));
     }
-
     loadDashboard() {
         document.getElementById('authScreen').classList.add('hidden');
         document.getElementById('dashboardScreen').classList.remove('hidden');
         document.getElementById('displayUser').innerText = this.currentUser.username;
-        
         this.renderData();
         this.checkTutorial();
     }
 
-    // === DATA & GAMIFICATION ===
+    // === DATA ===
     addTx() {
         const tx = {
             id: Date.now(), user: this.currentUser.username,
@@ -131,9 +114,9 @@ class App {
         this.transactions.unshift(tx);
         localStorage.setItem('fm_data', JSON.stringify(this.transactions));
         document.getElementById('addForm').reset();
+        alert('Transaction Added!');
         this.renderData();
     }
-
     renderData() {
         const myData = this.transactions.filter(t => t.user === this.currentUser.username);
         let inc = 0, exp = 0, cats = {};
@@ -158,12 +141,10 @@ class App {
         document.getElementById('totalInc').innerText = `$${inc}`;
         document.getElementById('totalExp').innerText = `$${exp}`;
         document.getElementById('repTotal').innerText = `$${net.toLocaleString()}`;
-        
         this.updateChart(cats);
         this.checkGoal(net);
         this.prepareReport();
     }
-
     deleteTx(id) {
         if(confirm('Delete?')) {
             this.transactions = this.transactions.filter(t => t.id !== id);
@@ -171,7 +152,6 @@ class App {
             this.renderData();
         }
     }
-
     updateChart(data) {
         const ctx = document.getElementById('expenseChart').getContext('2d');
         if(this.chart) this.chart.destroy();
@@ -180,7 +160,6 @@ class App {
             data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#ff7675','#fdcb6e','#00b894','#0984e3'] }] }
         });
     }
-
     checkGoal(net) {
         const pct = Math.min((net/2000)*100, 100);
         document.getElementById('progressBar').style.width = Math.max(0, pct)+'%';
@@ -190,7 +169,6 @@ class App {
             if(!this.rainTriggered) { this.triggerRain(); this.rainTriggered=true; }
         }
     }
-
     triggerRain() {
         for(let i=0; i<40; i++) {
             let m = document.createElement('div');
@@ -201,34 +179,23 @@ class App {
             setTimeout(()=>m.remove(),4000);
         }
     }
-
-    // === UTILS ===
     nav(v) {
-        ['home','transactions','account'].forEach(i=>document.getElementById('view-'+i).classList.add('hidden'));
-        document.getElementById('view-report').classList.toggle('hidden', v !== 'report');
-        if(v !== 'report') document.getElementById('view-'+v).classList.remove('hidden');
+        ['home','add','history','account','report'].forEach(i=>document.getElementById('view-'+i).classList.add('hidden'));
+        document.getElementById('view-'+v).classList.remove('hidden');
         if(v==='account') document.getElementById('profUser').value = this.currentUser.username;
     }
-
     setTab(t) {
         document.getElementById('type').value=t;
         document.getElementById('tabExp').className = t==='expense'?'tab active':'tab';
         document.getElementById('tabInc').className = t==='income'?'tab active':'tab';
     }
-
     prepareReport() {
         document.getElementById('repUser').innerText = this.currentUser.username;
         document.getElementById('repDate').innerText = new Date().toLocaleDateString();
     }
-    
     updateProfile() {
         const pass = document.getElementById('profPass').value;
-        if(pass) {
-            this.currentUser.password = pass;
-            this.updateUserRecord();
-            alert('Password Updated!');
-        }
+        if(pass) { this.currentUser.password = pass; this.updateUserRecord(); alert('Password Updated!'); }
     }
 }
-
 const app = new App();
