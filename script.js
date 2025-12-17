@@ -1,4 +1,4 @@
-// --- OOP: Transaction Class ---
+// --- Transaction Class ---
 class Transaction {
     constructor(id, desc, amount, type, category, date) {
         this.id = id;
@@ -10,67 +10,111 @@ class Transaction {
     }
 }
 
-// --- App Logic ---
-class MoneyTracker {
+// --- Main App Logic ---
+class MoneyApp {
     constructor() {
+        this.users = JSON.parse(localStorage.getItem('users')) || [];
+        this.currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
         this.transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-        this.chart = null;
-        this.user = sessionStorage.getItem('user') || 'Guest';
         
-        // Define colors for categories
-        this.catColors = {
-            'Food': '#ffeaa7',
-            'Transport': '#81ecec',
-            'Shopping': '#fab1a0',
-            'Bills': '#74b9ff',
-            'Entertainment': '#a29bfe'
-        };
+        // Check which page we are on
+        if (document.getElementById('loginForm')) this.initAuth();
+        if (document.getElementById('transactionList')) this.initDashboard();
+        
+        this.catColors = { 'Food':'#ffeaa7', 'Transport':'#81ecec', 'Shopping':'#fab1a0', 'Bills':'#74b9ff', 'Entertainment':'#a29bfe' };
+    }
 
-        if(document.getElementById('transactionList')) {
-            this.initDashboard();
-        } else if (document.getElementById('loginForm')) {
-            this.initLogin();
+    // --- AUTHENTICATION LOGIC ---
+    initAuth() {
+        // Handle Login
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
+            
+            const foundUser = this.users.find(u => u.username === user && u.password === pass);
+            
+            if (foundUser) {
+                sessionStorage.setItem('currentUser', JSON.stringify(foundUser));
+                window.location.href = 'dashboard.html';
+            } else {
+                document.getElementById('authMsg').innerText = "Invalid Username or Password";
+            }
+        });
+
+        // Handle Register
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('regUser').value;
+            const pass = document.getElementById('regPass').value;
+            const role = document.querySelector('input[name="role"]:checked').value;
+
+            if(this.users.find(u => u.username === user)) {
+                document.getElementById('authMsg').innerText = "Username already taken";
+                return;
+            }
+
+            this.users.push({ username: user, password: pass, role: role });
+            localStorage.setItem('users', JSON.stringify(this.users));
+            alert("Registration successful! Please login.");
+            this.toggleAuth('login');
+        });
+    }
+
+    toggleAuth(view) {
+        document.getElementById('authMsg').innerText = "";
+        if(view === 'register') {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+            document.getElementById('formTitle').innerText = "Create Account";
+        } else {
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('formTitle').innerText = "Welcome Back";
         }
     }
 
-    initLogin() {
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const user = document.getElementById('username').value;
-            if(user) {
-                sessionStorage.setItem('user', user);
-                window.location.href = 'dashboard.html';
-            }
-        });
+    logout() {
+        sessionStorage.removeItem('currentUser');
+        window.location.href = 'index.html';
     }
 
+    // --- DASHBOARD LOGIC ---
     initDashboard() {
-        document.getElementById('userDisplay').innerText = this.user;
+        if (!this.currentUser) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        // Display User Info & Admin Badge
+        document.getElementById('displayUsername').innerText = this.currentUser.username;
+        if(this.currentUser.role === 'Admin') {
+            document.getElementById('adminBadge').classList.remove('hidden');
+        }
+
         this.render();
 
-        document.getElementById('transactionForm').addEventListener('submit', (e) => {
+        // Add Transaction
+        document.getElementById('addForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            this.addTransaction();
+            const desc = document.getElementById('desc').value;
+            const amount = document.getElementById('amount').value;
+            const type = document.getElementById('type').value;
+            const category = document.getElementById('category').value;
+
+            const newT = new Transaction(Date.now(), desc, amount, type, category, new Date().toLocaleDateString());
+            this.transactions.unshift(newT);
+            localStorage.setItem('transactions', JSON.stringify(this.transactions));
+            
+            this.render();
+            toggleModal(false);
+            e.target.reset();
         });
-    }
-
-    addTransaction() {
-        const desc = document.getElementById('desc').value;
-        const amount = document.getElementById('amount').value;
-        const type = document.getElementById('type').value;
-        const category = document.getElementById('category').value;
-
-        const newT = new Transaction(Date.now(), desc, amount, type, category, new Date().toLocaleDateString());
-        this.transactions.unshift(newT); // Add to top
-        localStorage.setItem('transactions', JSON.stringify(this.transactions));
-        
-        this.render();
-        toggleModal(false);
-        document.getElementById('transactionForm').reset();
     }
 
     deleteTransaction(id) {
-        if(confirm('Delete this item?')) {
+        // Admin Rule: Admins can delete anything, Users can only delete their own (Simulated here as 'all' for simplicity)
+        if(confirm("Delete this transaction?")) {
             this.transactions = this.transactions.filter(t => t.id !== id);
             localStorage.setItem('transactions', JSON.stringify(this.transactions));
             this.render();
@@ -96,14 +140,14 @@ class MoneyTracker {
             
             item.innerHTML = `
                 <div class="icon-box" style="background:${color}">
-                    <i class="fas fa-tag" style="color:#2d3436; opacity:0.7;"></i>
+                    <i class="fas fa-tag" style="opacity:0.6;"></i>
                 </div>
-                <div class="info">
+                <div class="t-info">
                     <h4>${t.desc}</h4>
-                    <small>${t.date} • ${t.category}</small>
+                    <small>${t.category} • ${t.date}</small>
                 </div>
-                <div class="amount" style="color: ${t.type === 'income' ? '#00b894' : '#ff7675'}">
-                    ${t.type === 'income' ? '+' : '-'}${t.amount}
+                <div style="font-weight:600; color:${t.type==='income'?'#00b894':'#ff7675'}">
+                    ${t.type==='income' ? '+' : '-'}${t.amount}
                 </div>
                 <i class="fas fa-trash" style="margin-left:15px; color:#b2bec3; cursor:pointer;" onclick="app.deleteTransaction(${t.id})"></i>
             `;
@@ -113,50 +157,42 @@ class MoneyTracker {
         document.getElementById('totalIncome').innerText = `$${income}`;
         document.getElementById('totalExpense').innerText = `$${expense}`;
         document.getElementById('netBalance').innerText = `$${income - expense}`;
-
-        this.updateChart(chartData);
+        this.renderChart(chartData);
     }
 
-    updateChart(data) {
+    renderChart(data) {
         const ctx = document.getElementById('expenseChart').getContext('2d');
-        if(this.chart) this.chart.destroy();
+        if(window.myChart) window.myChart.destroy();
         
-        this.chart = new Chart(ctx, {
+        window.myChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(data),
                 datasets: [{
                     data: Object.values(data),
-                    backgroundColor: Object.keys(data).map(k => this.catColors[k] || '#ccc'),
+                    backgroundColor: Object.keys(data).map(k => this.catColors[k]),
                     borderWidth: 0
                 }]
             },
-            options: {
-                cutout: '70%',
-                plugins: { legend: { position: 'right', labels: { boxWidth: 10 } } }
-            }
+            options: { cutout: '75%', plugins: { legend: { position: 'right', labels: { boxWidth: 10 } } } }
         });
     }
 
     exportCSV() {
-        let csv = "Date,Desc,Amount,Type\n" + this.transactions.map(t => `${t.date},${t.desc},${t.amount},${t.type}`).join("\n");
+        let csv = "Date,Description,Category,Type,Amount\n";
+        this.transactions.forEach(t => {
+            csv += `${t.date},${t.desc},${t.category},${t.type},${t.amount}\n`;
+        });
         const link = document.createElement('a');
         link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
-        link.download = 'expenses.csv';
+        link.download = 'data.csv';
         link.click();
     }
 }
 
-const app = new MoneyTracker();
-
-// Global functions for HTML interaction
+// Global Helpers
+const app = new MoneyApp();
 function toggleModal(show) {
     const modal = document.getElementById('modal');
     show ? modal.classList.add('active') : modal.classList.remove('active');
-}
-
-function setTransType(type, el) {
-    document.getElementById('type').value = type;
-    document.querySelectorAll('.pill-selector div').forEach(d => d.classList.remove('active'));
-    el.classList.add('active');
 }
