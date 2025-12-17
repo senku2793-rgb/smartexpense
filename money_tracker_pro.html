@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Dashboard Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* === CSS STYLES === */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+        :root {
+            --primary-blue: #3c8dbc;
+            --primary-dark: #367fa9;
+            --sidebar-bg: #222d32;
+            --sidebar-hover: #1e282c;
+            --bg-gray: #ecf0f5;
+            --text-dark: #333;
+            --success: #00a65a;
+            --danger: #dd4b39;
+            --gold: #f39c12;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+        body { background-color: var(--bg-gray); height: 100vh; overflow-x: hidden; }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        .success { color: var(--success); font-weight: bold; }
+        .danger { color: var(--danger); font-weight: bold; }
+        .text-center { text-align: center; }
+
+        /* Login Screen */
+        .auth-container {
+            height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: var(--bg-gray); width: 100%; position: absolute; top:0; left:0; z-index: 1000;
+        }
+        .login-card {
+            background: white; padding: 40px; border-top: 3px solid var(--primary-blue);
+            width: 380px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .login-header { color: var(--primary-blue); margin-bottom: 20px; }
+        .input-group {
+            display: flex; align-items: center; border: 1px solid #ccc;
+            margin-bottom: 15px; padding: 10px; background: white;
+        }
+        .input-group input { border: none; outline: none; margin-left: 10px; width: 100%; }
+        .btn-primary {
+            width: 100%; background: var(--primary-blue); color: white; border: none;
+            padding: 12px; cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .auth-switch { margin-top: 15px; font-size: 0.9rem; cursor: pointer; color: var(--primary-blue); }
+        .auth-switch:hover { text-decoration: underline; }
+
+        /* Dashboard Layout */
+        .dashboard-wrapper { display: flex; height: 100vh; width: 100%; }
+        
+        .sidebar {
+            width: 230px; background: var(--sidebar-bg); color: #b8c7ce;
+            display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        .brand {
+            height: 50px; background: var(--primary-dark); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; font-weight: bold;
+        }
+        .nav-links { list-style: none; display: flex; flex-direction: column; height: 100%; }
+        .nav-links li a {
+            display: block; padding: 12px 15px; color: #b8c7ce; text-decoration: none;
+            border-left: 3px solid transparent; cursor: pointer;
+        }
+        .nav-links li:hover, .nav-links li.active { background: var(--sidebar-hover); color: white; }
+        .nav-links li.active { border-left-color: var(--primary-blue); }
+        .nav-links i { margin-right: 10px; width: 20px; text-align: center; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+
+        .top-bar {
+            height: 50px; background: var(--primary-blue); color: white;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px;
+        }
+        .user-profile { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+
+        .content-container { padding: 15px; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+        /* Cards */
+        .card {
+            background: white; border-top: 3px solid #d2d6de;
+            border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h4 { font-size: 1rem; color: #444; font-weight: 500; }
+        .border-bottom { border-bottom: 1px solid #f4f4f4; }
+
+        /* Views (Transactions, Account, Reports) */
+        .view-section { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .grid-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        @media (max-width: 768px) { .grid-layout { grid-template-columns: 1fr; } .sidebar { display: none; } }
+
+        /* Transaction Widget */
+        .tabs { display: flex; border-bottom: 1px solid #f4f4f4; }
+        .tab-btn {
+            flex: 1; padding: 10px; background: transparent; border: none;
+            border-bottom: 3px solid transparent; cursor: pointer; color: #444;
+        }
+        .tab-btn.active { border-bottom-color: var(--primary-blue); font-weight: bold; color: var(--text-dark); }
+        .widget-form { padding: 20px; }
+        .form-row { margin-bottom: 15px; }
+        .form-row label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.85rem; }
+        .form-row input, .form-row select { width: 100%; padding: 8px; border: 1px solid #d2d6de; }
+        .btn-action { background: #3c8dbc; color: white; border: none; padding: 10px 20px; font-size: 0.9rem; cursor: pointer; float: right; }
+        
+        /* Table */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #f4f4f4; }
+        .data-table th { background: white; font-weight: bold; color: #444; }
+        .btn-delete { background: none; border: none; color: #999; cursor: pointer; }
+        .btn-delete:hover { color: var(--danger); }
+
+        /* Report View specific */
+        .report-paper { padding: 40px; background: white; min-height: 600px; }
+        .report-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+        
+        /* Account View specific */
+        .account-form { max-width: 500px; margin: 0 auto; padding: 20px; }
+
+        /* Print Styles for PDF Report */
+        @media print {
+            body * { visibility: hidden; }
+            #report-area, #report-area * { visibility: visible; }
+            #report-area { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+
+        /* Net Worth & Gamification */
+        .amount-large { font-size: 1.5rem; }
+        .balance-list { padding: 10px 20px; }
+        .balance-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f4f4f4; font-size: 0.9rem; }
+        .total-row { border-top: 2px solid #eee; border-bottom: none; font-weight: bold; margin-top: 10px; padding-top: 10px; }
+        .challenge-card { border-top: 3px solid var(--gold); }
+        .progress-container { width: 100%; background-color: #e0e0e0; border-radius: 20px; height: 25px; overflow: hidden; margin-bottom: 15px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+        .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #f1c40f, #f39c12); color: white; text-align: center; line-height: 25px; font-size: 0.8rem; font-weight: bold; transition: width 0.5s ease-in-out; }
+        .reward-box { text-align: center; background: #fff8e1; padding: 15px; border: 1px dashed var(--gold); border-radius: 10px; animation: popIn 0.5s ease; }
+        .btn-claim { background: var(--gold); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; }
+        .gold-badge { color: #f1c40f !important; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    </style>
+</head>
+<body>
+
+    <section id="authView" class="auth-container">
+        
+        <div id="loginCard" class="login-card">
+            <div class="login-header">
+                <i class="fas fa-chart-pie fa-2x"></i>
+                <h2>FinanceManager</h2>
+            </div>
+            <p>Welcome Back! Please Sign In.</p>
+            
+            <form id="loginForm">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="loginUser" placeholder="Username" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="loginPass" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn-primary">Sign In</button>
+            </form>
+            <div class="auth-switch" onclick="app.toggleAuth('register')">First time user? Create account</div>
+        </div>
+
+        <div id="registerCard" class="login-card hidden">
+            <div class="login-header">
+                <i class="fas fa-user-plus fa-2x"></i>
+                <h2>Create Account</h2>
+            </div>
+            <p>Setup your profile to get started.</p>
+            
+            <form id="registerForm">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="regUser" placeholder="Choose Username" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="regPass" placeholder="Choose Password" required>
+                </div>
+                <button type="submit" class="btn-primary">Register</button>
+            </form>
+            <div class="auth-switch" onclick="app.toggleAuth('login')">Already have an account? Sign In</div>
+        </div>
+
+    </section>
+
+
+    <div id="dashboardView" class="dashboard-wrapper hidden">
+        
+        <nav class="sidebar">
+            <div class="brand"><i class="fas fa-dollar-sign"></i> Finance</div>
+            <ul class="nav-links">
+                <li onclick="app.navTo('home')" id="nav-home" class="active"><a><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li onclick="app.navTo('transactions')" id="nav-transactions"><a><i class="fas fa-exchange-alt"></i> Transactions</a></li>
+                <li onclick="app.navTo('account')" id="nav-account"><a><i class="fas fa-user-cog"></i> Account</a></li>
+                <li onclick="app.navTo('reports')" id="nav-reports"><a><i class="fas fa-file-pdf"></i> Reports</a></li>
+                <li style="margin-top: auto;"><a onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <h2 id="pageTitle">Dashboard</h2>
+                <div class="user-profile">
+                    <span id="displayUsername">User</span>
+                    <i class="fas fa-user-circle fa-2x"></i>
+                </div>
+            </header>
+
+            <div class="content-container">
+
+                <section id="view-home" class="view-section">
+                    <div class="grid-layout">
+                        <div class="col-left">
+                            <div class="card net-worth-card">
+                                <div class="card-header">
+                                    <h4><i class="fas fa-caret-down"></i> NET WORTH</h4>
+                                    <span class="amount-large success" id="netWorthDisplay">$0.00</span>
+                                </div>
+                                <div class="balance-list">
+                                    <div class="balance-item"><span>Cash / Wallet</span><span class="success" id="cashDisplay">$0.00</span></div>
+                                    <div class="balance-item"><span>Bank Account</span><span class="success" id="bankDisplay">$0.00</span></div>
+                                    <div class="balance-item total-row"><span>Total Assets</span><span class="success" id="totalAssetsDisplay">$0.00</span></div>
+                                </div>
+                            </div>
+
+                            <div class="card challenge-card">
+                                <div class="card-header"><h4><i class="fas fa-trophy"></i> BONUS CHALLENGE</h4></div>
+                                <div style="padding: 20px;">
+                                    <p style="margin-bottom: 10px; color: #555;">Task: Reach a Net Worth of <strong>$2,000</strong></p>
+                                    <div class="progress-container"><div class="progress-bar" id="progressBar">0%</div></div>
+                                    <div id="rewardSection" class="reward-box hidden">
+                                        <i class="fas fa-medal fa-3x" style="color: gold; margin-bottom: 10px;"></i>
+                                        <h3>Target Smashed!</h3>
+                                        <p>You've unlocked the <strong>Gold Pro Status</strong>.</p>
+                                        <button class="btn-claim" onclick="app.claimReward()">Claim Reward</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-right">
+                            <div class="card transaction-widget">
+                                <div class="card-header border-bottom"><h4><i class="fas fa-plus-circle"></i> NEW TRANSACTION</h4></div>
+                                <div class="tabs">
+                                    <button class="tab-btn active" onclick="app.setTab('expense', this)">Expense</button>
+                                    <button class="tab-btn" onclick="app.setTab('income', this)">Income</button>
+                                </div>
+                                <form id="addForm" class="widget-form">
+                                    <input type="hidden" id="transType" value="expense">
+                                    <div class="form-row"><label>Description</label><input type="text" id="desc" placeholder="e.g. Salary" required></div>
+                                    <div class="form-row"><label>Amount ($)</label><input type="number" id="amount" placeholder="0.00" step="0.01" required></div>
+                                    <div class="form-row">
+                                        <label>Category</label>
+                                        <select id="category">
+                                            <option value="Food">Food</option>
+                                            <option value="Transport">Transport</option>
+                                            <option value="Shopping">Shopping</option>
+                                            <option value="Housing">Housing</option>
+                                            <option value="Salary">Salary</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row"><label>Date</label><input type="date" id="date" required></div>
+                                    <button type="submit" class="btn-action">Add Expense</button>
+                                </form>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header border-bottom"><h4>RECENT ACTIVITY</h4></div>
+                                <table class="data-table">
+                                    <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Action</th></tr></thead>
+                                    <tbody id="transactionTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="view-transactions" class="view-section hidden">
+                    <div class="card">
+                        <div class="card-header border-bottom">
+                            <h4>FULL TRANSACTION HISTORY</h4>
+                            <button class="btn-action" style="float:none; width:auto; padding:5px 15px;" onclick="app.navTo('home')">Back to Dashboard</button>
+                        </div>
+                        <div style="padding:20px;">
+                            <table class="data-table">
+                                <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Type</th><th>Amount</th><th>Action</th></tr></thead>
+                                <tbody id="fullHistoryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="view-account" class="view-section hidden">
+                    <div class="card account-form">
+                        <div class="card-header border-bottom text-center">
+                            <h4><i class="fas fa-user-cog"></i> EDIT PROFILE</h4>
+                        </div>
+                        <div style="padding:20px;">
+                            <form id="profileForm">
+                                <div class="form-row">
+                                    <label>Current Username</label>
+                                    <input type="text" id="editUser" disabled style="background:#eee;">
+                                </div>
+                                <div class="form-row">
+                                    <label>New Username</label>
+                                    <input type="text" id="newUsername" placeholder="Enter new username">
+                                </div>
+                                <div class="form-row">
+                                    <label>New Password</label>
+                                    <input type="password" id="newPassword" placeholder="Enter new password">
+                                </div>
+                                <button type="submit" class="btn-action" style="width:100%;">Update Profile</button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="view-reports" class="view-section hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>FINANCIAL REPORT</h4>
+                            <button class="btn-action" onclick="window.print()" style="background:#333;"><i class="fas fa-print"></i> Print / Save as PDF</button>
+                        </div>
+                        <div id="report-area" class="report-paper">
+                            <div class="report-header">
+                                <h2>Financial Statement</h2>
+                                <p>Generated on: <span id="reportDate"></span></p>
+                                <p>User: <span id="reportUser"></span></p>
+                            </div>
+                            <table class="data-table">
+                                <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
+                                <tbody id="reportTableBody"></tbody>
+                            </table>
+                            <div style="margin-top:30px; text-align:right;">
+                                <h3>Net Worth: <span id="reportNetWorth"></span></h3>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        class DashboardApp {
+            constructor() {
+                this.currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+                this.users = JSON.parse(localStorage.getItem('users')) || [];
+                this.transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+                
+                // Set initial date
+                if(document.getElementById('date')) document.getElementById('date').valueAsDate = new Date();
+                
+                this.init();
+            }
+
+            init() {
+                // Auth Check
+                if (this.currentUser) this.showDashboard();
+                else this.showAuth();
+
+                // Login Listener
+                document.getElementById('loginForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const u = document.getElementById('loginUser').value;
+                    const p = document.getElementById('loginPass').value;
+                    this.login(u, p);
+                });
+
+                // Register Listener
+                document.getElementById('registerForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const u = document.getElementById('regUser').value;
+                    const p = document.getElementById('regPass').value;
+                    this.register(u, p);
+                });
+
+                // Add Transaction Listener
+                document.getElementById('addForm').addEventListener('submit', (e) => this.handleAddTransaction(e));
+
+                // Update Profile Listener
+                document.getElementById('profileForm').addEventListener('submit', (e) => this.updateProfile(e));
+            }
+
+            // --- AUTH LOGIC ---
+            toggleAuth(mode) {
+                if(mode === 'register') {
+                    document.getElementById('loginCard').classList.add('hidden');
+                    document.getElementById('registerCard').classList.remove('hidden');
+                } else {
+                    document.getElementById('registerCard').classList.add('hidden');
+                    document.getElementById('loginCard').classList.remove('hidden');
+                }
+            }
+
+            register(username, password) {
+                // Check if user exists
+                if(this.users.find(u => u.username === username)) {
+                    alert('Username already taken!');
+                    return;
+                }
+                const newUser = { username, password };
+                this.users.push(newUser);
+                localStorage.setItem('users', JSON.stringify(this.users));
+                alert('Account created! Please Sign In.');
+                this.toggleAuth('login');
+            }
+
+            login(username, password) {
+                const user = this.users.find(u => u.username === username && u.password === password);
+                if(user) {
+                    this.currentUser = user;
+                    sessionStorage.setItem('currentUser', JSON.stringify(user));
+                    this.showDashboard();
+                } else {
+                    alert('Invalid Username or Password');
+                }
+            }
+
+            logout() {
+                sessionStorage.removeItem('currentUser');
+                this.currentUser = null;
+                this.showAuth();
+            }
+
+            showAuth() {
+                document.getElementById('dashboardView').classList.add('hidden');
+                document.getElementById('authView').classList.remove('hidden');
+                document.getElementById('loginForm').reset();
+            }
+
+            showDashboard() {
+                document.getElementById('authView').classList.add('hidden');
+                document.getElementById('dashboardView').classList.remove('hidden');
+                this.navTo('home');
+                this.renderAll();
+            }
+
+            // --- NAVIGATION LOGIC ---
+            navTo(viewId) {
+                // Hide all sections
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                // Remove active class from nav
+                document.querySelectorAll('.nav-links li').forEach(el => el.classList.remove('active'));
+
+                // Show selected
+                document.getElementById('view-' + viewId).classList.remove('hidden');
+                document.getElementById('nav-' + viewId).classList.add('active');
+                
+                // Update Title
+                document.getElementById('pageTitle').innerText = viewId.charAt(0).toUpperCase() + viewId.slice(1);
+
+                if(viewId === 'reports') this.prepareReport();
+                if(viewId === 'account') this.prepareAccount();
+            }
+
+            // --- TRANSACTION LOGIC ---
+            handleAddTransaction(e) {
+                e.preventDefault();
+                const desc = document.getElementById('desc').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const category = document.getElementById('category').value;
+                const date = document.getElementById('date').value;
+                const type = document.getElementById('transType').value;
+
+                const newT = { id: Date.now(), desc, amount, type, category, date, user: this.currentUser.username };
+                this.transactions.unshift(newT);
+                localStorage.setItem('transactions', JSON.stringify(this.transactions));
+                
+                this.renderAll();
+                e.target.reset();
+                document.getElementById('date').valueAsDate = new Date();
+            }
+
+            deleteTransaction(id) {
+                if(confirm('Delete this transaction?')) {
+                    this.transactions = this.transactions.filter(t => t.id !== id);
+                    localStorage.setItem('transactions', JSON.stringify(this.transactions));
+                    this.renderAll();
+                }
+            }
+
+            setTab(type, btn) {
+                document.getElementById('transType').value = type;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const submitBtn = document.querySelector('.btn-action');
+                if(type === 'income') { submitBtn.style.background = '#00a65a'; submitBtn.innerText = 'Add Income'; }
+                else { submitBtn.style.background = '#3c8dbc'; submitBtn.innerText = 'Add Expense'; }
+            }
+
+            // --- RENDER LOGIC ---
+            renderAll() {
+                document.getElementById('displayUsername').innerText = this.currentUser.username;
+                
+                // Filter transactions for current user
+                const userTrans = this.transactions.filter(t => t.user === this.currentUser.username);
+
+                let income = 0, expense = 0;
+                
+                // Render Recent Table (Short)
+                const tbodyRecent = document.getElementById('transactionTableBody');
+                tbodyRecent.innerHTML = '';
+                // Render Full History Table
+                const tbodyFull = document.getElementById('fullHistoryBody');
+                tbodyFull.innerHTML = '';
+
+                userTrans.forEach(t => {
+                    if(t.type === 'income') income += t.amount;
+                    else expense += t.amount;
+
+                    const rowHtml = `<tr><td>${t.date}</td><td>${t.desc}</td><td class="${t.type === 'income' ? 'success' : 'danger'}">${t.type === 'income' ? '+' : '-'} $${t.amount.toFixed(2)}</td><td><button class="btn-delete" onclick="app.deleteTransaction(${t.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+                    
+                    // Add to recent (limit to 5)
+                    if(tbodyRecent.children.length < 5) tbodyRecent.innerHTML += rowHtml;
+
+                    // Add to full
+                    tbodyFull.innerHTML += `<tr><td>${t.date}</td><td>${t.category}</td><td>${t.desc}</td><td>${t.type}</td><td class="${t.type === 'income' ? 'success' : 'danger'}">$${t.amount.toFixed(2)}</td><td><button class="btn-delete" onclick="app.deleteTransaction(${t.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+                });
+
+                const netWorth = income - expense;
+                document.getElementById('netWorthDisplay').innerText = `$${netWorth.toLocaleString()}`;
+                document.getElementById('netWorthDisplay').className = netWorth >= 0 ? 'amount-large success' : 'amount-large danger';
+                
+                document.getElementById('bankDisplay').innerText = `$${(netWorth * 0.7).toLocaleString()}`;
+                document.getElementById('cashDisplay').innerText = `$${(netWorth * 0.3).toLocaleString()}`;
+                document.getElementById('totalAssetsDisplay').innerText = `$${netWorth.toLocaleString()}`;
+
+                this.updateChallenge(netWorth);
+            }
+
+            // --- ACCOUNT LOGIC ---
+            prepareAccount() {
+                document.getElementById('editUser').value = this.currentUser.username;
+            }
+
+            updateProfile(e) {
+                e.preventDefault();
+                const newName = document.getElementById('newUsername').value;
+                const newPass = document.getElementById('newPassword').value;
+
+                if(!newName && !newPass) return alert("Please enter new details.");
+
+                // Update in Local Storage List
+                const index = this.users.findIndex(u => u.username === this.currentUser.username);
+                if(index !== -1) {
+                    if(newName) this.users[index].username = newName;
+                    if(newPass) this.users[index].password = newPass;
+                    
+                    localStorage.setItem('users', JSON.stringify(this.users));
+                    
+                    // Update Session
+                    this.currentUser = this.users[index];
+                    sessionStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                    
+                    alert("Profile Updated Successfully!");
+                    this.renderAll();
+                    document.getElementById('profileForm').reset();
+                }
+            }
+
+            // --- REPORT LOGIC ---
+            prepareReport() {
+                document.getElementById('reportDate').innerText = new Date().toLocaleDateString();
+                document.getElementById('reportUser').innerText = this.currentUser.username;
+                document.getElementById('reportNetWorth').innerText = document.getElementById('netWorthDisplay').innerText;
+
+                const userTrans = this.transactions.filter(t => t.user === this.currentUser.username);
+                const tbody = document.getElementById('reportTableBody');
+                tbody.innerHTML = '';
+
+                userTrans.forEach(t => {
+                    tbody.innerHTML += `<tr><td>${t.date}</td><td>${t.category}</td><td>${t.desc}</td><td>${t.type}</td><td class="${t.type === 'income' ? 'success' : 'danger'}">$${t.amount.toFixed(2)}</td></tr>`;
+                });
+            }
+
+            // --- GAMIFICATION ---
+            updateChallenge(netWorth) {
+                const goal = 2000;
+                let percent = Math.floor((netWorth / goal) * 100);
+                if (percent < 0) percent = 0; if (percent > 100) percent = 100;
+                
+                const bar = document.getElementById('progressBar');
+                bar.style.width = percent + '%';
+                bar.innerText = percent + '%';
+                
+                if (netWorth >= goal) {
+                    if(!localStorage.getItem('rewardClaimed_' + this.currentUser.username)) {
+                        document.getElementById('rewardSection').classList.remove('hidden');
+                    } else {
+                        this.applyGoldStatus();
+                    }
+                } else {
+                    document.getElementById('rewardSection').classList.add('hidden');
+                }
+            }
+
+            claimReward() {
+                localStorage.setItem('rewardClaimed_' + this.currentUser.username, 'true');
+                document.getElementById('rewardSection').classList.add('hidden');
+                alert("🎉 Congratulations! You are now a Gold Pro User!");
+                this.applyGoldStatus();
+            }
+
+            applyGoldStatus() {
+                const profileIcon = document.querySelector('.user-profile i');
+                profileIcon.classList.remove('fa-user-circle');
+                profileIcon.classList.add('fa-crown', 'gold-badge');
+                
+                const userSpan = document.getElementById('displayUsername');
+                if(!userSpan.innerHTML.includes('PRO')) userSpan.innerHTML += ' <span style="background:gold; color:black; font-size:10px; padding:2px 5px; border-radius:3px;">PRO</span>';
+            }
+        }
+
+        const app = new DashboardApp();
+    </script>
+</body>
+</html>
