@@ -3,50 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auth - Money Tracker</title>
+    <title>FinanceManager Pro</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="app-container">
-        <div class="auth-screen">
-            <div class="app-logo">
-                <i class="fas fa-wallet"></i>
+
+    <section id="authView" class="auth-container active">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fas fa-chart-pie fa-2x"></i>
+                <h2>FinanceManager</h2>
             </div>
-            <h2 id="formTitle">Welcome Back</h2>
-            <p style="color:#636E72; font-size:0.9rem; margin-bottom:20px;">Track your expenses effectively.</p>
-
-            <form id="loginForm" class="auth-form">
-                <input type="text" id="loginUser" class="input-field" placeholder="Username" required>
-                <input type="password" id="loginPass" class="input-field" placeholder="Password" required>
-                <button type="submit" class="btn-main">Login</button>
-                <div class="switch-link">
-                    New here? <span onclick="app.toggleAuth('register')">Create Account</span>
+            <p>Sign in to manage your finances</p>
+            
+            <form id="loginForm">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="loginUser" placeholder="Username" required>
                 </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="loginPass" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn-primary">Sign In</button>
             </form>
-
-            <form id="registerForm" class="auth-form hidden">
-                <input type="text" id="regUser" class="input-field" placeholder="Choose Username" required>
-                <input type="password" id="regPass" class="input-field" placeholder="Choose Password" required>
-                
-                <div class="role-group">
-                    <label class="role-label">
-                        <input type="radio" name="role" value="User" checked> User
-                    </label>
-                    <label class="role-label">
-                        <input type="radio" name="role" value="Admin"> Admin
-                    </label>
-                </div>
-
-                <button type="submit" class="btn-main">Register</button>
-                <div class="switch-link">
-                    Already have an account? <span onclick="app.toggleAuth('login')">Login</span>
-                </div>
-            </form>
-
-            <p id="authMsg" style="color:#e74c3c; margin-top:10px; font-size:0.8rem;"></p>
+            <p class="footer-text">EEC 3733 Assignment Demo</p>
         </div>
+    </section>
+
+    <div id="dashboardView" class="dashboard-wrapper hidden">
+        
+        <nav class="sidebar">
+            <div class="brand">
+                <i class="fas fa-dollar-sign"></i> Finance
+            </div>
+            <ul class="nav-links">
+                <li class="active"><a href="#"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="#"><i class="fas fa-exchange-alt"></i> Transactions</a></li>
+                <li><a href="#"><i class="fas fa-wallet"></i> Accounts</a></li>
+                <li><a href="#"><i class="fas fa-chart-line"></i> Reports</a></li>
+                <li style="margin-top: auto;"><a href="#" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <h2 id="pageTitle">Dashboard</h2>
+                <div class="user-profile">
+                    <span id="displayUsername">User</span>
+                    <i class="fas fa-user-circle fa-2x"></i>
+                </div>
+            </header>
+
+            <div class="content-container">
+                
+                <div class="card welcome-card">
+                    <div class="icon-circle">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <h3>Welcome back!</h3>
+                        <p>Track your income and expenses to unlock pro rewards. Data is stored locally.</p>
+                    </div>
+                </div>
+
+                <div class="grid-layout">
+                    
+                    <div class="col-left">
+                        
+                        <div class="card net-worth-card">
+                            <div class="card-header">
+                                <h4><i class="fas fa-caret-down"></i> NET WORTH</h4>
+                                <span class="amount-large success" id="netWorthDisplay">$0.00</span>
+                            </div>
+                            
+                            <div class="balance-list">
+                                <div class="balance-item">
+                                    <span>Cash / Wallet</span>
+                                    <span class="success" id="cashDisplay">$0.00</span>
+                                </div>
+                                <div class="balance-item">
+                                    <span>Bank Account</span>
+                                    <span class="success" id="bankDisplay">$0.00</span>
+                                </div>
+                                <div class="balance-item total-row">
+                                    <span>Total Assets</span>
+                                    <span class="success" id="totalAssetsDisplay">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card challenge-card">
+                            <div class="card-header">
+                                <h4><i class="fas fa-trophy"></i> BONUS CHALLENGE</h4>
+                            </div>
+                            <div style="padding: 20px;">
+                                <p style="margin-bottom: 10px; color: #555;">
+                                    <strong>Task:</strong> Reach a Net Worth of <strong>$2,000</strong>
+                                </p>
+                                
+                                <div class="progress-container">
+                                    <div class="progress-bar" id="progressBar">0%</div>
+                                </div>
+                                
+                                <div id="rewardSection" class="reward-box hidden">
+                                    <i class="fas fa-medal fa-3x" style="color: gold; margin-bottom: 10px;"></i>
+                                    <h3>Target Smashed!</h3>
+                                    <p>You've unlocked the <strong>Gold Pro Status</strong>.</p>
+                                    <button class="btn-claim" onclick="app.claimReward()">Claim Reward</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h4>Expenses by Category</h4>
+                            </div>
+                            <div style="height: 200px; padding: 10px;">
+                                <canvas id="expenseChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-right">
+                        
+                        <div class="card transaction-widget">
+                            <div class="card-header border-bottom">
+                                <h4><i class="fas fa-caret-down"></i> NEW TRANSACTION</h4>
+                            </div>
+                            
+                            <div class="tabs">
+                                <button class="tab-btn active" onclick="app.setTab('expense', this)">Expense</button>
+                                <button class="tab-btn" onclick="app.setTab('income', this)">Income</button>
+                            </div>
+
+                            <form id="addForm" class="widget-form">
+                                <input type="hidden" id="transType" value="expense">
+                                
+                                <div class="form-row">
+                                    <label>Description</label>
+                                    <input type="text" id="desc" placeholder="e.g. Groceries" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label>Amount ($)</label>
+                                    <input type="number" id="amount" placeholder="0.00" step="0.01" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label>Category</label>
+                                    <select id="category">
+                                        <option value="Food">Food</option>
+                                        <option value="Transport">Transport</option>
+                                        <option value="Shopping">Shopping</option>
+                                        <option value="Housing">Housing</option>
+                                        <option value="Salary">Salary</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label>Date</label>
+                                    <input type="date" id="date" required>
+                                </div>
+
+                                <button type="submit" class="btn-action">Add Transaction</button>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header border-bottom">
+                                <h4>RECENT TRANSACTIONS</h4>
+                            </div>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Amount</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionTableBody">
+                                    </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
