@@ -10,11 +10,13 @@
 </head>
 <body>
 
-    <div id="authScreen" class="auth-wrapper">
-        <video id="bgVideo" autoplay muted loop playsinline>
+    <div class="video-container">
+        <video autoplay muted loop playsinline id="bgVideo">
             <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-blue-and-pink-lines-996-large.mp4" type="video/mp4">
         </video>
+        <div class="video-overlay"></div> </div>
 
+    <div id="authScreen" class="auth-wrapper">
         <div id="loginCard" class="auth-card">
             <div class="auth-icon"><i class="fas fa-wallet"></i></div>
             <h2>Finance Master</h2>
@@ -40,21 +42,7 @@
         </div>
     </div>
 
-    <div id="tutorialOverlay" class="tutorial-overlay hidden">
-        <div class="tutorial-card">
-            <div id="tutImage" class="tutorial-image"><i class="fas fa-hand-holding-usd"></i></div>
-            <h2 id="tutTitle">Welcome!</h2>
-            <p id="tutDesc" class="tut-text">Welcome to Finance Master.</p>
-            <div class="step-dots" id="tutDots"><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-            <div class="tut-actions">
-                <button class="btn btn-outline small" onclick="app.endTutorial()">Skip</button>
-                <button class="btn btn-primary small" onclick="app.nextStep()">Next</button>
-            </div>
-        </div>
-    </div>
-
     <div id="dashboardScreen" class="dashboard-container hidden">
-        
         <div class="sidebar">
             <div class="logo"><i class="fas fa-chart-pie"></i> FIN.MASTER</div>
             <div class="nav-item active" onclick="app.nav('home')"><i class="fas fa-home"></i> Dashboard</div>
@@ -62,15 +50,12 @@
             <div class="nav-item" onclick="app.nav('history')"><i class="fas fa-list"></i> History</div>
             <div class="nav-item" onclick="app.nav('account')"><i class="fas fa-user"></i> Account</div>
             <div class="nav-item" onclick="app.nav('report')"><i class="fas fa-file-pdf"></i> Report</div>
-            
             <div class="spacer"></div>
-            
             <div class="ad-sidebar">
-                <div class="ad-label">Sponsored</div>
-                <p>Buy <strong>Bitcoin</strong> now! 🚀</p>
-                <button class="btn-tiny">See Offer</button>
+                <div class="ad-label">Ad</div>
+                <p>Invest in <strong>Gold</strong> today! 📈</p>
+                <button class="btn-tiny">Open</button>
             </div>
-
             <div class="nav-item logout" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Logout</div>
         </div>
 
@@ -80,7 +65,6 @@
                     <h1>Hello, <span id="displayUser">User</span>! 👋</h1>
                     <div id="proBadge" class="hidden pro-badge"><i class="fas fa-crown"></i> PRO</div>
                 </div>
-
                 <div class="grid">
                     <div>
                         <div class="card balance-card">
@@ -106,42 +90,26 @@
                             <h4>Expenses</h4>
                             <canvas id="expenseChart"></canvas>
                         </div>
-                        <div class="card">
-                            <h4>Recent Activity</h4>
-                            <table>
-                                <thead><tr><th>Desc</th><th>Amt</th><th></th></tr></thead>
-                                <tbody id="recentTable"></tbody>
-                            </table>
-                        </div>
                     </div>
                 </div>
             </div>
 
             <div id="view-add" class="hidden">
                 <div class="card small-card">
-                    <h2><i class="fas fa-plus-circle"></i> New Transaction</h2>
-                    <p style="color:#666; margin-bottom:20px;">Enter details below to update your finance records.</p>
-                    
+                    <h2>New Transaction</h2>
                     <form id="addForm">
                         <div class="tab-group">
                             <div class="tab active" id="tabExp" onclick="app.setTab('expense')">Expense</div>
                             <div class="tab" id="tabInc" onclick="app.setTab('income')">Income</div>
                         </div>
                         <input type="hidden" id="type" value="expense">
-                        
-                        <label class="small-text">Description</label>
-                        <input type="text" id="desc" class="form-control" placeholder="e.g. Lunch" required>
-                        
-                        <label class="small-text">Amount</label>
-                        <input type="number" id="amount" class="form-control" placeholder="0.00" required>
-                        
-                        <label class="small-text">Category</label>
+                        <input type="text" id="desc" class="form-control" placeholder="Description" required>
+                        <input type="number" id="amount" class="form-control" placeholder="Amount ($)" required>
                         <select id="category" class="form-control">
                             <option value="Food">🍔 Food</option>
                             <option value="Transport">🚗 Transport</option>
                             <option value="Shopping">🛍️ Shopping</option>
                             <option value="Salary">💰 Salary</option>
-                            <option value="Bills">📃 Bills</option>
                         </select>
                         <button type="submit" class="btn btn-primary">Add Entry</button>
                     </form>
@@ -150,11 +118,7 @@
 
             <div id="view-history" class="hidden">
                 <div class="card">
-                    <div class="flex-between">
-                        <h2>Full History</h2>
-                        <button class="btn btn-outline small" onclick="app.nav('add')">+ Add New</button>
-                    </div>
-                    <br>
+                    <h2>History</h2>
                     <table>
                         <thead><tr><th>Date</th><th>Cat</th><th>Desc</th><th>Amt</th><th>Act</th></tr></thead>
                         <tbody id="fullTable"></tbody>
@@ -187,11 +151,6 @@
                     <button class="btn btn-primary small" onclick="window.print()">Print PDF</button>
                     <button class="btn btn-outline small" onclick="app.nav('home')">Back</button>
                 </div>
-            </div>
-
-            <div class="ad-footer">
-                <span>🔥 <strong>Hot Deal:</strong> Premium Analytics 50% OFF!</span>
-                <button class="btn-tiny" onclick="this.parentElement.style.display='none'">X</button>
             </div>
         </div>
     </div>
