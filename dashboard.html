@@ -11,31 +11,30 @@
 <body>
     <div class="app-container">
         <div class="header">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="header-top">
                 <div>
-                    <small style="opacity: 0.8;">Welcome back,</small>
-                    <h3 id="userDisplay">User</h3>
+                    <small style="opacity:0.8;">Hello,</small>
+                    <h3 style="display:flex; align-items:center;">
+                        <span id="displayUsername">User</span>
+                        <span id="adminBadge" class="admin-badge hidden">ADMIN</span>
+                    </h3>
                 </div>
-                <i class="fas fa-bell" style="font-size: 1.2rem;"></i>
+                <button onclick="app.logout()" class="logout-btn" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
             </div>
         </div>
 
         <div class="balance-card">
-            <small>Total Balance</small>
+            <small style="color:#636E72;">Total Balance</small>
             <h2 id="netBalance">$0.00</h2>
             <div class="row">
                 <div class="stat">
-                    <div style="display:flex; align-items:center; gap:5px;">
-                        <div style="width:20px; height:20px; background:#e6fcf5; border-radius:50%; color:#00b894; display:flex; align-items:center; justify-content:center;"><i class="fas fa-arrow-down" style="font-size:10px;"></i></div>
-                        <label>Income</label>
-                    </div>
+                    <small>Income</small>
                     <div class="val-inc" id="totalIncome">$0.00</div>
                 </div>
                 <div class="stat expense">
-                    <div style="display:flex; align-items:center; gap:5px; justify-content: flex-end;">
-                        <label>Expense</label>
-                        <div style="width:20px; height:20px; background:#fff5f5; border-radius:50%; color:#ff7675; display:flex; align-items:center; justify-content:center;"><i class="fas fa-arrow-up" style="font-size:10px;"></i></div>
-                    </div>
+                    <small>Expense</small>
                     <div class="val-exp" id="totalExpense">$0.00</div>
                 </div>
             </div>
@@ -44,13 +43,13 @@
         <div class="section-title">
             <h3>Analytics</h3>
         </div>
-        <div style="height: 200px; position: relative; padding: 0 20px;">
+        <div style="height:180px; padding:0 20px;">
             <canvas id="expenseChart"></canvas>
         </div>
 
         <div class="section-title">
             <h3>Transactions</h3>
-            <span class="link" onclick="app.exportCSV()">Export</span>
+            <small onclick="app.exportCSV()" style="color:var(--primary); cursor:pointer;">Export</small>
         </div>
         <ul id="transactionList" class="transaction-list">
             </ul>
@@ -62,27 +61,25 @@
 
     <div id="modal" class="modal" onclick="if(event.target === this) toggleModal(false)">
         <div class="modal-content">
-            <h3 style="margin-bottom: 20px;">Add Transaction</h3>
-            
-            <form id="transactionForm">
-                <div class="pill-selector">
-                    <div class="active" onclick="setTransType('expense', this)" data-type="expense">Expense</div>
-                    <div onclick="setTransType('income', this)" data-type="income">Income</div>
-                </div>
-                <input type="hidden" id="type" value="expense">
-
-                <input type="number" id="amount" class="input-field" placeholder="Amount ($)" required>
-                <input type="text" id="desc" class="input-field" placeholder="Description (e.g. Lunch)" required>
+            <h3 style="margin-bottom:20px; color:var(--text-dark);">Add Transaction</h3>
+            <form id="addForm">
+                <input type="text" id="desc" class="input-field" placeholder="Description (e.g. Coffee)" required>
+                <input type="number" id="amount" class="input-field" placeholder="Amount" required>
                 
+                <select id="type" class="input-field">
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                </select>
+
                 <select id="category" class="input-field">
                     <option value="Food">🍔 Food</option>
-                    <option value="Transport">🚕 Transport</option>
+                    <option value="Transport">🚗 Transport</option>
                     <option value="Shopping">🛍️ Shopping</option>
                     <option value="Bills">📃 Bills</option>
                     <option value="Entertainment">🎬 Entertainment</option>
                 </select>
 
-                <button type="submit" class="btn-main">Save Transaction</button>
+                <button type="submit" class="btn-main">Save</button>
             </form>
         </div>
     </div>
