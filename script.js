@@ -1,245 +1,223 @@
-// --- Transaction Class ---
-class Transaction {
-    constructor(id, desc, amount, type, category, date) {
-        this.id = id;
-        this.desc = desc;
-        this.amount = parseFloat(amount);
-        this.type = type;
-        this.category = category;
-        this.date = date;
-    }
-}
-
-// --- Main App Logic ---
-class DashboardApp {
+class App {
     constructor() {
-        this.currentUser = sessionStorage.getItem('currentUser');
-        this.transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        this.users = JSON.parse(localStorage.getItem('fm_users')) || [];
+        this.currentUser = JSON.parse(sessionStorage.getItem('fm_current'));
+        this.transactions = JSON.parse(localStorage.getItem('fm_data')) || [];
         this.chart = null;
-
-        // Set today's date in form
-        if(document.getElementById('date')) {
-            document.getElementById('date').valueAsDate = new Date();
-        }
+        this.rainTriggered = false;
 
         this.init();
     }
 
     init() {
-        // Router Logic
         if (this.currentUser) {
-            this.switchView('dashboard');
+            this.loadDashboard();
         } else {
-            this.switchView('auth');
+            this.showAuth();
         }
 
-        // Event Listeners
-        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
-        if(document.getElementById('addForm')) {
-            document.getElementById('addForm').addEventListener('submit', (e) => this.handleAddTransaction(e));
+        // Listeners
+        document.getElementById('loginForm').addEventListener('submit', e => { e.preventDefault(); this.login(); });
+        document.getElementById('registerForm').addEventListener('submit', e => { e.preventDefault(); this.register(); });
+        document.getElementById('addForm').addEventListener('submit', e => { e.preventDefault(); this.addTx(); });
+        document.getElementById('profileForm').addEventListener('submit', e => { e.preventDefault(); this.updateProfile(); });
+    }
+
+    // === AUTH ===
+    toggleAuth(view) {
+        if(view === 'register') {
+            document.getElementById('loginCard').classList.add('hidden');
+            document.getElementById('registerCard').classList.remove('hidden');
+        } else {
+            document.getElementById('registerCard').classList.add('hidden');
+            document.getElementById('loginCard').classList.remove('hidden');
         }
     }
 
-    handleLogin(e) {
-        e.preventDefault();
-        const user = document.getElementById('loginUser').value;
-        if(user.length > 0) {
-            sessionStorage.setItem('currentUser', user);
+    register() {
+        const u = document.getElementById('regUser').value;
+        const p = document.getElementById('regPass').value;
+        
+        if (this.users.find(user => user.username === u)) {
+            alert('Username already exists!');
+            return;
+        }
+
+        this.users.push({ username: u, password: p });
+        localStorage.setItem('fm_users', JSON.stringify(this.users));
+        alert('Account Created!');
+        this.toggleAuth('login');
+    }
+
+    login() {
+        const u = document.getElementById('loginUser').value;
+        const p = document.getElementById('loginPass').value;
+        
+        const user = this.users.find(user => user.username === u && user.password === p);
+        if (user) {
             this.currentUser = user;
-            this.switchView('dashboard');
+            sessionStorage.setItem('fm_current', JSON.stringify(user));
+            this.loadDashboard();
+        } else {
+            alert('Invalid Credentials');
         }
     }
 
     logout() {
-        sessionStorage.removeItem('currentUser');
-        this.currentUser = null;
-        this.switchView('auth');
+        sessionStorage.removeItem('fm_current');
+        location.reload();
     }
 
-    switchView(viewName) {
-        const auth = document.getElementById('authView');
-        const dash = document.getElementById('dashboardView');
-        
-        if(viewName === 'dashboard') {
-            auth.classList.add('hidden');
-            dash.classList.remove('hidden');
-            this.renderDashboard();
-        } else {
-            dash.classList.add('hidden');
-            auth.classList.remove('hidden');
-        }
+    showAuth() {
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('dashboardScreen').classList.add('hidden');
     }
 
-    handleAddTransaction(e) {
-        e.preventDefault();
+    loadDashboard() {
+        document.getElementById('authScreen').classList.add('hidden');
+        document.getElementById('dashboardScreen').classList.remove('hidden');
+        document.getElementById('displayUser').innerText = this.currentUser.username;
+        this.renderData();
+    }
+
+    // === DATA ===
+    addTx() {
         const desc = document.getElementById('desc').value;
-        const amount = document.getElementById('amount').value;
-        const category = document.getElementById('category').value;
-        const date = document.getElementById('date').value;
-        const type = document.getElementById('transType').value;
+        const amount = parseFloat(document.getElementById('amount').value);
+        const type = document.getElementById('type').value;
+        const cat = document.getElementById('category').value;
 
-        const newT = new Transaction(Date.now(), desc, amount, type, category, date);
-        this.transactions.unshift(newT); // Add to top
-        localStorage.setItem('transactions', JSON.stringify(this.transactions));
+        const tx = {
+            id: Date.now(),
+            user: this.currentUser.username,
+            desc, amount, type, cat,
+            date: new Date().toLocaleDateString()
+        };
 
-        this.renderDashboard();
-        e.target.reset();
-        document.getElementById('date').valueAsDate = new Date(); // Reset date
-    }
-
-    deleteTransaction(id) {
-        if(confirm('Are you sure you want to delete this?')) {
-            this.transactions = this.transactions.filter(t => t.id !== id);
-            localStorage.setItem('transactions', JSON.stringify(this.transactions));
-            this.renderDashboard();
-        }
-    }
-
-    // --- Tab Switching Logic (Expense vs Income) ---
-    setTab(type, btn) {
-        document.getElementById('transType').value = type;
+        this.transactions.unshift(tx);
+        localStorage.setItem('fm_data', JSON.stringify(this.transactions));
         
-        // Update UI Tabs
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        document.getElementById('addForm').reset();
+        this.renderData();
+    }
 
-        // Change button color based on type
-        const submitBtn = document.querySelector('.btn-action');
-        if(type === 'income') {
-            submitBtn.style.background = '#00a65a'; // Green
-            submitBtn.innerText = 'Add Income';
-        } else {
-            submitBtn.style.background = '#3c8dbc'; // Blue
-            submitBtn.innerText = 'Add Expense';
+    deleteTx(id) {
+        if(confirm('Delete?')) {
+            this.transactions = this.transactions.filter(t => t.id !== id);
+            localStorage.setItem('fm_data', JSON.stringify(this.transactions));
+            this.renderData();
         }
     }
 
-    renderDashboard() {
-        document.getElementById('displayUsername').innerText = this.currentUser;
+    renderData() {
+        const myData = this.transactions.filter(t => t.user === this.currentUser.username);
+        let income = 0, expense = 0, catMap = {};
+        
+        const recent = document.getElementById('recentTable');
+        const full = document.getElementById('fullTable');
+        const rep = document.getElementById('repTable');
+        recent.innerHTML = ''; full.innerHTML = ''; rep.innerHTML = '';
 
-        // 1. Calculate Finances
-        let income = 0;
-        let expense = 0;
-        let catData = {};
+        myData.forEach(t => {
+            if (t.type === 'income') income += t.amount;
+            else { expense += t.amount; catMap[t.cat] = (catMap[t.cat] || 0) + t.amount; }
 
-        const tbody = document.getElementById('transactionTableBody');
-        tbody.innerHTML = '';
+            const cls = t.type === 'income' ? 'amount-pos' : 'amount-neg';
+            const sign = t.type === 'income' ? '+' : '-';
 
-        this.transactions.forEach(t => {
-            if(t.type === 'income') income += t.amount;
-            else {
-                expense += t.amount;
-                catData[t.category] = (catData[t.category] || 0) + t.amount;
+            // Recent (Limit 5)
+            if(recent.children.length < 5) {
+                recent.innerHTML += `<tr><td>${t.desc}</td><td>${t.cat}</td><td class="${cls}">${sign}$${t.amount}</td><td><i class="fas fa-trash" style="cursor:pointer; color:#d63031;" onclick="app.deleteTx(${t.id})"></i></td></tr>`;
             }
 
-            // Add Table Row
-            const row = `
-                <tr>
-                    <td>${t.date}</td>
-                    <td>
-                        <span style="font-weight:500">${t.desc}</span><br>
-                        <small style="color:#777">${t.category}</small>
-                    </td>
-                    <td class="${t.type === 'income' ? 'success' : 'danger'}">
-                        ${t.type === 'income' ? '+' : '-'} $${t.amount.toFixed(2)}
-                    </td>
-                    <td>
-                        <button class="btn-delete" onclick="app.deleteTransaction(${t.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-            tbody.innerHTML += row;
+            // Full & Report
+            full.innerHTML += `<tr><td>${t.date}</td><td>${t.cat}</td><td>${t.desc}</td><td>${t.type}</td><td class="${cls}">${sign}$${t.amount}</td><td><i class="fas fa-trash" style="cursor:pointer;" onclick="app.deleteTx(${t.id})"></i></td></tr>`;
+            rep.innerHTML += `<tr><td>${t.date}</td><td>${t.cat}</td><td>${t.desc}</td><td class="${cls}">${sign}$${t.amount}</td></tr>`;
         });
 
-        // 2. Update Net Worth Card
         const netWorth = income - expense;
-        document.getElementById('netWorthDisplay').innerText = `$${netWorth.toLocaleString()}`;
-        document.getElementById('netWorthDisplay').className = netWorth >= 0 ? 'amount-large success' : 'amount-large danger';
-        
-        // Simulating "Bank" vs "Cash" (Split 70/30)
-        document.getElementById('bankDisplay').innerText = `$${(netWorth * 0.7).toLocaleString()}`;
-        document.getElementById('cashDisplay').innerText = `$${(netWorth * 0.3).toLocaleString()}`;
-        document.getElementById('totalAssetsDisplay').innerText = `$${netWorth.toLocaleString()}`;
+        document.getElementById('totalBalance').innerText = `$${netWorth.toLocaleString()}`;
+        document.getElementById('totalInc').innerText = `$${income}`;
+        document.getElementById('totalExp').innerText = `$${expense}`;
+        document.getElementById('repTotal').innerText = `$${netWorth.toLocaleString()}`;
 
-        // 3. Render Chart & Check Challenge
-        this.renderChart(catData);
-        this.updateChallenge(netWorth);
-        
-        // Re-apply gold status if they already won previously
-        if(localStorage.getItem('rewardClaimed')) {
-            this.applyGoldStatus();
-        }
+        this.updateChart(catMap);
+        this.checkGoal(netWorth);
+        this.prepareReport();
     }
 
-    // --- NEW: Bonus Challenge Logic ---
-    updateChallenge(netWorth) {
-        const goal = 2000;
-        let percent = Math.floor((netWorth / goal) * 100);
-        if (percent < 0) percent = 0;
-        if (percent > 100) percent = 100;
-
-        // Update CSS Width
-        const bar = document.getElementById('progressBar');
-        bar.style.width = percent + '%';
-        bar.innerText = percent + '%';
-
-        // Check if Goal Met
-        const rewardBox = document.getElementById('rewardSection');
-        
-        // If met AND not already claimed
-        if (netWorth >= goal) {
-            if(!localStorage.getItem('rewardClaimed')) {
-                rewardBox.classList.remove('hidden');
-            }
-        } else {
-            rewardBox.classList.add('hidden');
-        }
-    }
-
-    claimReward() {
-        localStorage.setItem('rewardClaimed', 'true');
-        document.getElementById('rewardSection').classList.add('hidden');
-        alert("🎉 Congratulations! You are now a Gold Pro User!");
-        this.applyGoldStatus();
-    }
-
-    applyGoldStatus() {
-        // Change the User Icon to Gold Crown
-        const profileIcon = document.querySelector('.user-profile i');
-        profileIcon.classList.remove('fa-user-circle');
-        profileIcon.classList.add('fa-crown', 'gold-badge');
-        
-        // Add PRO text label if not there
-        const userSpan = document.getElementById('displayUsername');
-        if(!userSpan.innerText.includes('PRO')) {
-            userSpan.innerHTML += ' <span style="background:gold; color:black; font-size:10px; padding:2px 5px; border-radius:3px;">PRO</span>';
-        }
-    }
-
-    renderChart(data) {
+    // === FEATURES ===
+    updateChart(data) {
         const ctx = document.getElementById('expenseChart').getContext('2d');
-        if(this.chart) this.chart.destroy();
-
+        if (this.chart) this.chart.destroy();
         this.chart = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(data),
-                datasets: [{
-                    data: Object.values(data),
-                    backgroundColor: ['#f56954', '#00a65a', '#f39c12', '#00c0ef', '#3c8dbc'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'right' } }
+                datasets: [{ data: Object.values(data), backgroundColor: ['#ff7675', '#fdcb6e', '#00b894', '#0984e3', '#6c5ce7'] }]
             }
         });
     }
+
+    checkGoal(netWorth) {
+        const goal = 2000;
+        let pct = Math.min((netWorth / goal) * 100, 100);
+        if (pct < 0) pct = 0;
+        document.getElementById('progressBar').style.width = pct + '%';
+
+        if (netWorth >= goal) {
+            document.getElementById('rewardMsg').classList.remove('hidden');
+            document.getElementById('proBadge').classList.remove('hidden');
+            if (!this.rainTriggered) { this.triggerRain(); this.rainTriggered = true; }
+        } else {
+            document.getElementById('rewardMsg').classList.add('hidden');
+            document.getElementById('proBadge').classList.add('hidden');
+        }
+    }
+
+    triggerRain() {
+        for (let i = 0; i < 30; i++) {
+            let m = document.createElement('div');
+            m.innerHTML = ['💸','💰','💵','💎'][Math.floor(Math.random()*4)];
+            m.className = 'money';
+            m.style.left = Math.random() * 100 + 'vw';
+            m.style.animation = `fall ${Math.random()*2+2}s linear`;
+            document.body.appendChild(m);
+            setTimeout(() => m.remove(), 4000);
+        }
+    }
+
+    // === UTILS ===
+    nav(view) {
+        ['home','transactions','account'].forEach(v => document.getElementById('view-'+v).classList.add('hidden'));
+        document.getElementById('view-report').classList.add('hidden');
+        
+        if(view === 'report') document.getElementById('view-report').classList.remove('hidden');
+        else document.getElementById('view-'+view).classList.remove('hidden');
+
+        if(view === 'account') document.getElementById('profUser').value = this.currentUser.username;
+    }
+
+    setTab(type) {
+        document.getElementById('type').value = type;
+        document.getElementById('tabExp').className = type === 'expense' ? 'tab active' : 'tab';
+        document.getElementById('tabInc').className = type === 'income' ? 'tab active' : 'tab';
+    }
+
+    updateProfile() {
+        const idx = this.users.findIndex(u => u.username === this.currentUser.username);
+        const pass = document.getElementById('profPass').value;
+        if(pass) {
+            this.users[idx].password = pass;
+            localStorage.setItem('fm_users', JSON.stringify(this.users));
+            alert('Password Updated!');
+        }
+    }
+
+    prepareReport() {
+        document.getElementById('repUser').innerText = this.currentUser.username;
+        document.getElementById('repDate').innerText = new Date().toLocaleDateString();
+    }
 }
 
-// Initialize
-const app = new DashboardApp();
+const app = new App();
