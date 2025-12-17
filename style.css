@@ -1,0 +1,185 @@
+/* Import Google Font 'Poppins' for that modern app look */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+:root {
+    --primary: #6C5CE7; /* Deep Purple */
+    --accent: #FDCB6E;  /* The App Yellow */
+    --bg-color: #F0F2F5;
+    --card-bg: #FFFFFF;
+    --text-dark: #2D3436;
+    --text-light: #636E72;
+    --success: #00B894;
+    --danger: #FF7675;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+body {
+    background-color: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* --- Mobile Container Simulation --- */
+.app-container {
+    background: var(--card-bg);
+    width: 100%;
+    max-width: 480px; /* Limits width to look like a phone */
+    min-height: 100vh;
+    box-shadow: 0 0 20px rgba(0,0,0,0.05);
+    position: relative;
+    padding-bottom: 80px; /* Space for floating button */
+}
+
+/* --- Login Page Styles --- */
+.login-screen {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    text-align: center;
+}
+
+.app-logo {
+    font-size: 4rem;
+    color: var(--accent);
+    margin-bottom: 10px;
+    background: #FFF3CD;
+    width: 100px;
+    height: 100px;
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-form { width: 100%; margin-top: 30px; }
+
+.input-field {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #E0E0E0;
+    border-radius: 12px;
+    font-size: 1rem;
+    background: #FAFAFA;
+    outline: none;
+    transition: 0.3s;
+}
+
+.input-field:focus { border-color: var(--primary); background: #FFF; }
+
+.btn-main {
+    width: 100%;
+    padding: 15px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+}
+
+/* --- Dashboard Styles --- */
+.header {
+    background: var(--primary);
+    padding: 40px 20px 30px 20px;
+    color: white;
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+}
+
+.balance-card {
+    background: white;
+    margin: -25px 20px 20px 20px; /* Overlap effect */
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.balance-card h2 { color: var(--text-dark); font-size: 2rem; margin: 5px 0; }
+.row { display: flex; justify-content: space-between; margin-top: 15px; }
+.stat { text-align: left; }
+.stat.expense { text-align: right; }
+.stat label { font-size: 0.8rem; color: var(--text-light); }
+.val-inc { color: var(--success); font-weight: 600; }
+.val-exp { color: var(--danger); font-weight: 600; }
+
+.section-title { padding: 0 20px; margin: 20px 0 10px 0; display: flex; justify-content: space-between; align-items: center; }
+.link { color: var(--primary); text-decoration: none; font-size: 0.9rem; cursor: pointer; }
+
+/* Transaction List */
+.transaction-list { list-style: none; padding: 0 20px; }
+.t-item {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 18px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+
+.icon-box {
+    width: 50px; height: 50px;
+    border-radius: 15px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    margin-right: 15px;
+}
+
+.info { flex: 1; }
+.info h4 { font-size: 1rem; color: var(--text-dark); }
+.info small { color: var(--text-light); font-size: 0.8rem; }
+.amount { font-weight: 600; font-size: 1rem; }
+
+/* Floating Action Button (The Yellow +) */
+.fab {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 65px; height: 65px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+    color: white;
+    box-shadow: 0 10px 20px rgba(253, 203, 110, 0.4);
+    cursor: pointer;
+    border: none;
+    z-index: 100;
+    transition: transform 0.2s;
+}
+.fab:active { transform: translateX(-50%) scale(0.9); }
+
+/* Modal (Popup) */
+.modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex; align-items: flex-end; /* Slide from bottom */
+    visibility: hidden; opacity: 0; transition: 0.3s;
+    justify-content: center;
+}
+.modal.active { visibility: visible; opacity: 1; }
+
+.modal-content {
+    background: white;
+    width: 100%; max-width: 480px;
+    border-radius: 30px 30px 0 0;
+    padding: 30px;
+    transform: translateY(100%); transition: 0.3s;
+}
+.modal.active .modal-content { transform: translateY(0); }
+
+.pill-selector { display: flex; background: #eee; border-radius: 12px; padding: 5px; margin-bottom: 20px; }
+.pill-selector div { flex: 1; text-align: center; padding: 10px; border-radius: 10px; cursor: pointer; transition: 0.3s; color: var(--text-light); }
+.pill-selector div.active { background: white; color: var(--text-dark); font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.pill-selector div.active[data-type="income"] { color: var(--success); }
+.pill-selector div.active[data-type="expense"] { color: var(--danger); }
