@@ -5,6 +5,15 @@ class App {
         this.transactions = JSON.parse(localStorage.getItem('fm_data')) || [];
         this.chart = null;
         this.rainTriggered = false;
+        
+        // Tutorial Steps configuration
+        this.tutStep = 0;
+        this.tutContent = [
+            { t: "Welcome!", d: "Welcome to Finance Master! Your personal wealth manager.", i: "fas fa-hand-holding-usd" },
+            { t: "Dashboard", d: "Track your Net Worth and expenses in real-time here.", i: "fas fa-chart-line" },
+            { t: "Add Data", d: "Use the 'New Transaction' card to add Income or Expenses.", i: "fas fa-plus-circle" },
+            { t: "Win Rewards", d: "Reach $2,000 Net Worth to unlock Pro status!", i: "fas fa-trophy" }
+        ];
 
         this.init();
     }
@@ -16,89 +25,143 @@ class App {
             this.showAuth();
         }
 
-        // Listeners
+        // Event Listeners
         document.getElementById('loginForm').addEventListener('submit', e => { e.preventDefault(); this.login(); });
         document.getElementById('registerForm').addEventListener('submit', e => { e.preventDefault(); this.register(); });
         document.getElementById('addForm').addEventListener('submit', e => { e.preventDefault(); this.addTx(); });
         document.getElementById('profileForm').addEventListener('submit', e => { e.preventDefault(); this.updateProfile(); });
     }
 
+    // === TUTORIAL LOGIC ===
+    checkTutorial() {
+        if (!this.currentUser.hasSeenTutorial) {
+            document.getElementById('tutorialOverlay').classList.remove('hidden');
+            this.renderTutorial();
+        }
+    }
+
+    renderTutorial() {
+        const c = this.tutContent[this.tutStep];
+        document.getElementById('tutTitle').innerText = c.t;
+        document.getElementById('tutDesc').innerText = c.d;
+        document.getElementById('tutImage').innerHTML = `<i class="${c.i}"></i>`;
+        
+        const dots = document.querySelectorAll('.dot');
+        dots.forEach((d, i) => d.className = i === this.tutStep ? 'dot active' : 'dot');
+    }
+
+    nextStep() {
+        this.tutStep++;
+        if (this.tutStep >= this.tutContent.length) {
+            this.endTutorial();
+        } else {
+            this.renderTutorial();
+        }
+    }
+
+    endTutorial() {
+        document.getElementById('tutorialOverlay').classList.add('hidden');
+        this.currentUser.hasSeenTutorial = true;
+        this.updateUserRecord();
+    }
+
+    updateUserRecord() {
+        const idx = this.users.findIndex(u => u.username === this.currentUser.username);
+        if (idx > -1) this.users[idx] = this.currentUser;
+        localStorage.setItem('fm_users', JSON.stringify(this.users));
+        sessionStorage.setItem('fm_current', JSON.stringify(this.currentUser));
+    }
+
     // === AUTH ===
     toggleAuth(view) {
-        if(view === 'register') {
-            document.getElementById('loginCard').classList.add('hidden');
-            document.getElementById('registerCard').classList.remove('hidden');
-        } else {
-            document.getElementById('registerCard').classList.add('hidden');
-            document.getElementById('loginCard').classList.remove('hidden');
-        }
+        document.getElementById('loginCard').classList.toggle('hidden', view === 'register');
+        document.getElementById('registerCard').classList.toggle('hidden', view !== 'register');
     }
 
     register() {
         const u = document.getElementById('regUser').value;
         const p = document.getElementById('regPass').value;
+        if (this.users.find(x => x.username === u)) return alert('Username exists!');
         
-        if (this.users.find(user => user.username === u)) {
-            alert('Username already exists!');
-            return;
-        }
-
-        this.users.push({ username: u, password: p });
+        const newUser = { username: u, password: p, hasSeenTutorial: false };
+        this.users.push(newUser);
         localStorage.setItem('fm_users', JSON.stringify(this.users));
-        alert('Account Created!');
+        alert('Success! Login now.');
         this.toggleAuth('login');
     }
 
     login() {
         const u = document.getElementById('loginUser').value;
         const p = document.getElementById('loginPass').value;
-        
-        const user = this.users.find(user => user.username === u && user.password === p);
+        const user = this.users.find(x => x.username === u && x.password === p);
         if (user) {
             this.currentUser = user;
             sessionStorage.setItem('fm_current', JSON.stringify(user));
             this.loadDashboard();
-        } else {
-            alert('Invalid Credentials');
-        }
+        } else alert('Invalid credentials!');
     }
 
-    logout() {
-        sessionStorage.removeItem('fm_current');
-        location.reload();
-    }
+    logout() { sessionStorage.removeItem('fm_current'); location.reload(); }
 
     showAuth() {
         document.getElementById('authScreen').classList.remove('hidden');
         document.getElementById('dashboardScreen').classList.add('hidden');
+        document.getElementById('bgVideo').play().catch(e => console.log('Autoplay blocked'));
     }
 
     loadDashboard() {
         document.getElementById('authScreen').classList.add('hidden');
         document.getElementById('dashboardScreen').classList.remove('hidden');
         document.getElementById('displayUser').innerText = this.currentUser.username;
+        
+        this.renderData();
+        this.checkTutorial();
+    }
+
+    // === DATA & GAMIFICATION ===
+    addTx() {
+        const tx = {
+            id: Date.now(), user: this.currentUser.username,
+            desc: document.getElementById('desc').value,
+            amount: parseFloat(document.getElementById('amount').value),
+            type: document.getElementById('type').value,
+            category: document.getElementById('category').value,
+            date: new Date().toLocaleDateString()
+        };
+        this.transactions.unshift(tx);
+        localStorage.setItem('fm_data', JSON.stringify(this.transactions));
+        document.getElementById('addForm').reset();
         this.renderData();
     }
 
-    // === DATA ===
-    addTx() {
-        const desc = document.getElementById('desc').value;
-        const amount = parseFloat(document.getElementById('amount').value);
-        const type = document.getElementById('type').value;
-        const cat = document.getElementById('category').value;
-
-        const tx = {
-            id: Date.now(),
-            user: this.currentUser.username,
-            desc, amount, type, cat,
-            date: new Date().toLocaleDateString()
-        };
-
-        this.transactions.unshift(tx);
-        localStorage.setItem('fm_data', JSON.stringify(this.transactions));
+    renderData() {
+        const myData = this.transactions.filter(t => t.user === this.currentUser.username);
+        let inc = 0, exp = 0, cats = {};
         
-        document.getElementById('addForm').reset();
-        this.renderData();
+        const rec = document.getElementById('recentTable');
+        const full = document.getElementById('fullTable');
+        const rep = document.getElementById('repTable');
+        rec.innerHTML=''; full.innerHTML=''; rep.innerHTML='';
+
+        myData.forEach(t => {
+            if(t.type==='income') inc+=t.amount; else { exp+=t.amount; cats[t.category]=(cats[t.category]||0)+t.amount; }
+            const c = t.type==='income'?'amount-pos':'amount-neg';
+            const s = t.type==='income'?'+':'-';
+            
+            if(rec.children.length<5) rec.innerHTML+=`<tr><td>${t.desc}</td><td class="${c}">${s}$${t.amount}</td><td><i class="fas fa-trash" onclick="app.deleteTx(${t.id})"></i></td></tr>`;
+            full.innerHTML+=`<tr><td>${t.date}</td><td>${t.category}</td><td>${t.desc}</td><td class="${c}">${s}$${t.amount}</td><td><i class="fas fa-trash" onclick="app.deleteTx(${t.id})"></i></td></tr>`;
+            rep.innerHTML+=`<tr><td>${t.date}</td><td>${t.category}</td><td>${t.desc}</td><td class="${c}">${s}$${t.amount}</td></tr>`;
+        });
+
+        const net = inc - exp;
+        document.getElementById('totalBalance').innerText = `$${net.toLocaleString()}`;
+        document.getElementById('totalInc').innerText = `$${inc}`;
+        document.getElementById('totalExp').innerText = `$${exp}`;
+        document.getElementById('repTotal').innerText = `$${net.toLocaleString()}`;
+        
+        this.updateChart(cats);
+        this.checkGoal(net);
+        this.prepareReport();
     }
 
     deleteTx(id) {
@@ -109,114 +172,62 @@ class App {
         }
     }
 
-    renderData() {
-        const myData = this.transactions.filter(t => t.user === this.currentUser.username);
-        let income = 0, expense = 0, catMap = {};
-        
-        const recent = document.getElementById('recentTable');
-        const full = document.getElementById('fullTable');
-        const rep = document.getElementById('repTable');
-        recent.innerHTML = ''; full.innerHTML = ''; rep.innerHTML = '';
-
-        myData.forEach(t => {
-            if (t.type === 'income') income += t.amount;
-            else { expense += t.amount; catMap[t.cat] = (catMap[t.cat] || 0) + t.amount; }
-
-            const cls = t.type === 'income' ? 'amount-pos' : 'amount-neg';
-            const sign = t.type === 'income' ? '+' : '-';
-
-            // Recent (Limit 5)
-            if(recent.children.length < 5) {
-                recent.innerHTML += `<tr><td>${t.desc}</td><td>${t.cat}</td><td class="${cls}">${sign}$${t.amount}</td><td><i class="fas fa-trash" style="cursor:pointer; color:#d63031;" onclick="app.deleteTx(${t.id})"></i></td></tr>`;
-            }
-
-            // Full & Report
-            full.innerHTML += `<tr><td>${t.date}</td><td>${t.cat}</td><td>${t.desc}</td><td>${t.type}</td><td class="${cls}">${sign}$${t.amount}</td><td><i class="fas fa-trash" style="cursor:pointer;" onclick="app.deleteTx(${t.id})"></i></td></tr>`;
-            rep.innerHTML += `<tr><td>${t.date}</td><td>${t.cat}</td><td>${t.desc}</td><td class="${cls}">${sign}$${t.amount}</td></tr>`;
-        });
-
-        const netWorth = income - expense;
-        document.getElementById('totalBalance').innerText = `$${netWorth.toLocaleString()}`;
-        document.getElementById('totalInc').innerText = `$${income}`;
-        document.getElementById('totalExp').innerText = `$${expense}`;
-        document.getElementById('repTotal').innerText = `$${netWorth.toLocaleString()}`;
-
-        this.updateChart(catMap);
-        this.checkGoal(netWorth);
-        this.prepareReport();
-    }
-
-    // === FEATURES ===
     updateChart(data) {
         const ctx = document.getElementById('expenseChart').getContext('2d');
-        if (this.chart) this.chart.destroy();
+        if(this.chart) this.chart.destroy();
         this.chart = new Chart(ctx, {
             type: 'doughnut',
-            data: {
-                labels: Object.keys(data),
-                datasets: [{ data: Object.values(data), backgroundColor: ['#ff7675', '#fdcb6e', '#00b894', '#0984e3', '#6c5ce7'] }]
-            }
+            data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#ff7675','#fdcb6e','#00b894','#0984e3'] }] }
         });
     }
 
-    checkGoal(netWorth) {
-        const goal = 2000;
-        let pct = Math.min((netWorth / goal) * 100, 100);
-        if (pct < 0) pct = 0;
-        document.getElementById('progressBar').style.width = pct + '%';
-
-        if (netWorth >= goal) {
+    checkGoal(net) {
+        const pct = Math.min((net/2000)*100, 100);
+        document.getElementById('progressBar').style.width = Math.max(0, pct)+'%';
+        if(net >= 2000) {
             document.getElementById('rewardMsg').classList.remove('hidden');
             document.getElementById('proBadge').classList.remove('hidden');
-            if (!this.rainTriggered) { this.triggerRain(); this.rainTriggered = true; }
-        } else {
-            document.getElementById('rewardMsg').classList.add('hidden');
-            document.getElementById('proBadge').classList.add('hidden');
+            if(!this.rainTriggered) { this.triggerRain(); this.rainTriggered=true; }
         }
     }
 
     triggerRain() {
-        for (let i = 0; i < 30; i++) {
+        for(let i=0; i<40; i++) {
             let m = document.createElement('div');
-            m.innerHTML = ['💸','💰','💵','💎'][Math.floor(Math.random()*4)];
-            m.className = 'money';
-            m.style.left = Math.random() * 100 + 'vw';
-            m.style.animation = `fall ${Math.random()*2+2}s linear`;
+            m.innerHTML = ['💸','💰','💎'][Math.floor(Math.random()*3)];
+            m.className='money'; m.style.left=Math.random()*100+'vw';
+            m.style.animation=`fall ${Math.random()*2+2}s linear`;
             document.body.appendChild(m);
-            setTimeout(() => m.remove(), 4000);
+            setTimeout(()=>m.remove(),4000);
         }
     }
 
     // === UTILS ===
-    nav(view) {
-        ['home','transactions','account'].forEach(v => document.getElementById('view-'+v).classList.add('hidden'));
-        document.getElementById('view-report').classList.add('hidden');
-        
-        if(view === 'report') document.getElementById('view-report').classList.remove('hidden');
-        else document.getElementById('view-'+view).classList.remove('hidden');
-
-        if(view === 'account') document.getElementById('profUser').value = this.currentUser.username;
+    nav(v) {
+        ['home','transactions','account'].forEach(i=>document.getElementById('view-'+i).classList.add('hidden'));
+        document.getElementById('view-report').classList.toggle('hidden', v !== 'report');
+        if(v !== 'report') document.getElementById('view-'+v).classList.remove('hidden');
+        if(v==='account') document.getElementById('profUser').value = this.currentUser.username;
     }
 
-    setTab(type) {
-        document.getElementById('type').value = type;
-        document.getElementById('tabExp').className = type === 'expense' ? 'tab active' : 'tab';
-        document.getElementById('tabInc').className = type === 'income' ? 'tab active' : 'tab';
-    }
-
-    updateProfile() {
-        const idx = this.users.findIndex(u => u.username === this.currentUser.username);
-        const pass = document.getElementById('profPass').value;
-        if(pass) {
-            this.users[idx].password = pass;
-            localStorage.setItem('fm_users', JSON.stringify(this.users));
-            alert('Password Updated!');
-        }
+    setTab(t) {
+        document.getElementById('type').value=t;
+        document.getElementById('tabExp').className = t==='expense'?'tab active':'tab';
+        document.getElementById('tabInc').className = t==='income'?'tab active':'tab';
     }
 
     prepareReport() {
         document.getElementById('repUser').innerText = this.currentUser.username;
         document.getElementById('repDate').innerText = new Date().toLocaleDateString();
+    }
+    
+    updateProfile() {
+        const pass = document.getElementById('profPass').value;
+        if(pass) {
+            this.currentUser.password = pass;
+            this.updateUserRecord();
+            alert('Password Updated!');
+        }
     }
 }
 
