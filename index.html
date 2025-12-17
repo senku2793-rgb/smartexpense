@@ -1,179 +1,201 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance Master Pro</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
+class App {
+    constructor() {
+        this.users = JSON.parse(localStorage.getItem('fm_users')) || [];
+        this.currentUser = JSON.parse(sessionStorage.getItem('fm_current'));
+        this.transactions = JSON.parse(localStorage.getItem('fm_data')) || [];
+        this.chart = null;
+        this.rainTriggered = false;
+        
+        this.tutStep = 0;
+        this.tutContent = [
+            { t: "Welcome!", d: "Welcome to Finance Master! Your personal wealth manager.", i: "fas fa-hand-holding-usd" },
+            { t: "Dashboard", d: "Track your Net Worth and expenses in real-time here.", i: "fas fa-chart-line" },
+            { t: "Add Data", d: "Go to 'Add Transaction' in the menu to add new Income or Expenses.", i: "fas fa-plus-circle" },
+            { t: "History", d: "View all your past records in the History tab.", i: "fas fa-list" },
+            { t: "Win Rewards", d: "Reach $2,000 Net Worth to unlock Pro status!", i: "fas fa-trophy" }
+        ];
 
-    <div id="authScreen" class="auth-wrapper">
-        <video id="bgVideo" autoplay muted loop playsinline>
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-blue-and-pink-lines-996-large.mp4" type="video/mp4">
-        </video>
+        this.init();
+    }
 
-        <div id="loginCard" class="auth-card">
-            <div class="auth-icon"><i class="fas fa-wallet"></i></div>
-            <h2>Finance Master</h2>
-            <p>Login to your dashboard</p>
-            <form id="loginForm">
-                <div class="input-box"><i class="fas fa-user"></i><input type="text" id="loginUser" placeholder="Username" required></div>
-                <div class="input-box"><i class="fas fa-lock"></i><input type="password" id="loginPass" placeholder="Password" required></div>
-                <button type="submit" class="btn btn-primary">Sign In</button>
-            </form>
-            <button class="btn btn-outline" onclick="app.toggleAuth('register')">Create New Account</button>
-        </div>
+    init() {
+        if (this.currentUser) {
+            this.loadDashboard();
+        } else {
+            this.showAuth();
+        }
 
-        <div id="registerCard" class="auth-card hidden">
-            <div class="auth-icon success"><i class="fas fa-user-plus"></i></div>
-            <h2>New Account</h2>
-            <p>Start your financial journey</p>
-            <form id="registerForm">
-                <div class="input-box"><i class="fas fa-user"></i><input type="text" id="regUser" placeholder="Choose Username" required></div>
-                <div class="input-box"><i class="fas fa-lock"></i><input type="password" id="regPass" placeholder="Password" required></div>
-                <button type="submit" class="btn btn-primary btn-success">Register</button>
-            </form>
-            <button class="btn btn-outline" onclick="app.toggleAuth('login')">Back to Login</button>
-        </div>
-    </div>
+        document.getElementById('loginForm').addEventListener('submit', e => { e.preventDefault(); this.login(); });
+        document.getElementById('registerForm').addEventListener('submit', e => { e.preventDefault(); this.register(); });
+        document.getElementById('addForm').addEventListener('submit', e => { e.preventDefault(); this.addTx(); });
+        document.getElementById('profileForm').addEventListener('submit', e => { e.preventDefault(); this.updateProfile(); });
+    }
 
-    <div id="tutorialOverlay" class="tutorial-overlay hidden">
-        <div class="tutorial-card">
-            <div id="tutImage" class="tutorial-image"><i class="fas fa-hand-holding-usd"></i></div>
-            <h2 id="tutTitle">Welcome!</h2>
-            <p id="tutDesc" class="tut-text">Welcome to Finance Master.</p>
+    // === TUTORIAL ===
+    checkTutorial() {
+        if (!this.currentUser.hasSeenTutorial) {
+            document.getElementById('tutorialOverlay').classList.remove('hidden');
+            this.renderTutorial();
+        }
+    }
+    renderTutorial() {
+        const c = this.tutContent[this.tutStep];
+        document.getElementById('tutTitle').innerText = c.t;
+        document.getElementById('tutDesc').innerText = c.d;
+        document.getElementById('tutImage').innerHTML = `<i class="${c.i}"></i>`;
+        const dots = document.querySelectorAll('.dot');
+        dots.forEach((d, i) => d.className = i === this.tutStep ? 'dot active' : 'dot');
+    }
+    nextStep() {
+        this.tutStep++;
+        if (this.tutStep >= this.tutContent.length) this.endTutorial(); else this.renderTutorial();
+    }
+    endTutorial() {
+        document.getElementById('tutorialOverlay').classList.add('hidden');
+        this.currentUser.hasSeenTutorial = true;
+        this.updateUserRecord();
+    }
+    updateUserRecord() {
+        const idx = this.users.findIndex(u => u.username === this.currentUser.username);
+        if (idx > -1) this.users[idx] = this.currentUser;
+        localStorage.setItem('fm_users', JSON.stringify(this.users));
+        sessionStorage.setItem('fm_current', JSON.stringify(this.currentUser));
+    }
+
+    // === AUTH ===
+    toggleAuth(view) {
+        document.getElementById('loginCard').classList.toggle('hidden', view === 'register');
+        document.getElementById('registerCard').classList.toggle('hidden', view !== 'register');
+    }
+    register() {
+        const u = document.getElementById('regUser').value;
+        const p = document.getElementById('regPass').value;
+        if (this.users.find(x => x.username === u)) return alert('Username exists!');
+        const newUser = { username: u, password: p, hasSeenTutorial: false };
+        this.users.push(newUser);
+        localStorage.setItem('fm_users', JSON.stringify(this.users));
+        alert('Success! Login now.');
+        this.toggleAuth('login');
+    }
+    login() {
+        const u = document.getElementById('loginUser').value;
+        const p = document.getElementById('loginPass').value;
+        const user = this.users.find(x => x.username === u && x.password === p);
+        if (user) {
+            this.currentUser = user;
+            sessionStorage.setItem('fm_current', JSON.stringify(user));
+            this.loadDashboard();
+        } else alert('Invalid credentials!');
+    }
+    logout() { sessionStorage.removeItem('fm_current'); location.reload(); }
+    showAuth() {
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('dashboardScreen').classList.add('hidden');
+        document.getElementById('bgVideo').play().catch(e => console.log('Autoplay blocked'));
+    }
+    loadDashboard() {
+        document.getElementById('authScreen').classList.add('hidden');
+        document.getElementById('dashboardScreen').classList.remove('hidden');
+        document.getElementById('displayUser').innerText = this.currentUser.username;
+        this.renderData();
+        this.checkTutorial();
+    }
+
+    // === DATA ===
+    addTx() {
+        const tx = {
+            id: Date.now(), user: this.currentUser.username,
+            desc: document.getElementById('desc').value,
+            amount: parseFloat(document.getElementById('amount').value),
+            type: document.getElementById('type').value,
+            category: document.getElementById('category').value,
+            date: new Date().toLocaleDateString()
+        };
+        this.transactions.unshift(tx);
+        localStorage.setItem('fm_data', JSON.stringify(this.transactions));
+        document.getElementById('addForm').reset();
+        alert('Transaction Added!');
+        this.renderData();
+    }
+    renderData() {
+        const myData = this.transactions.filter(t => t.user === this.currentUser.username);
+        let inc = 0, exp = 0, cats = {};
+        
+        const rec = document.getElementById('recentTable');
+        const full = document.getElementById('fullTable');
+        const rep = document.getElementById('repTable');
+        rec.innerHTML=''; full.innerHTML=''; rep.innerHTML='';
+
+        myData.forEach(t => {
+            if(t.type==='income') inc+=t.amount; else { exp+=t.amount; cats[t.category]=(cats[t.category]||0)+t.amount; }
+            const c = t.type==='income'?'amount-pos':'amount-neg';
+            const s = t.type==='income'?'+':'-';
             
-            <div class="step-dots" id="tutDots">
-                <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
-            </div>
+            if(rec.children.length<5) rec.innerHTML+=`<tr><td>${t.desc}</td><td class="${c}">${s}$${t.amount}</td><td><i class="fas fa-trash" onclick="app.deleteTx(${t.id})"></i></td></tr>`;
+            full.innerHTML+=`<tr><td>${t.date}</td><td>${t.category}</td><td>${t.desc}</td><td class="${c}">${s}$${t.amount}</td><td><i class="fas fa-trash" onclick="app.deleteTx(${t.id})"></i></td></tr>`;
+            rep.innerHTML+=`<tr><td>${t.date}</td><td>${t.category}</td><td>${t.desc}</td><td class="${c}">${s}$${t.amount}</td></tr>`;
+        });
 
-            <div class="tut-actions">
-                <button class="btn btn-outline small" onclick="app.endTutorial()">Skip</button>
-                <button class="btn btn-primary small" onclick="app.nextStep()">Next</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="dashboardScreen" class="dashboard-container hidden">
-        <div class="sidebar">
-            <div class="logo"><i class="fas fa-chart-pie"></i> FIN.MASTER</div>
-            <div class="nav-item active" onclick="app.nav('home')"><i class="fas fa-home"></i> Dashboard</div>
-            <div class="nav-item" onclick="app.nav('transactions')"><i class="fas fa-list"></i> History</div>
-            <div class="nav-item" onclick="app.nav('account')"><i class="fas fa-user"></i> Account</div>
-            <div class="nav-item" onclick="app.nav('report')"><i class="fas fa-file-pdf"></i> Report</div>
-            <div class="spacer"></div>
-            <div class="nav-item logout" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Logout</div>
-        </div>
-
-        <div class="main-content">
-            <div id="view-home">
-                <div class="header">
-                    <h1>Hello, <span id="displayUser">User</span>! 👋</h1>
-                    <div id="proBadge" class="hidden pro-badge"><i class="fas fa-crown"></i> PRO</div>
-                </div>
-
-                <div class="grid">
-                    <div>
-                        <div class="card balance-card">
-                            <h3>Total Net Worth</h3>
-                            <h1 id="totalBalance">$0.00</h1>
-                            <div class="stats-row">
-                                <span><i class="fas fa-arrow-down"></i> In: <span id="totalInc">$0</span></span>
-                                <span><i class="fas fa-arrow-up"></i> Out: <span id="totalExp">$0</span></span>
-                            </div>
-                        </div>
-
-                        <div class="card challenge-card">
-                            <div class="flex-between">
-                                <h4>🏆 Pro Challenge</h4>
-                                <button onclick="app.triggerRain()" class="btn-tiny">(Test Rain)</button>
-                            </div>
-                            <p class="small-text">Goal: Reach <strong>$2,000</strong></p>
-                            <div class="progress-bar"><div id="progressBar" class="progress-fill"></div></div>
-                            <div id="rewardMsg" class="hidden reward-text">Goal Reached!</div>
-                        </div>
-
-                        <div class="card">
-                            <h4>Expenses</h4>
-                            <canvas id="expenseChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="card">
-                            <h4>Add Transaction</h4>
-                            <form id="addForm">
-                                <div class="tab-group">
-                                    <div class="tab active" id="tabExp" onclick="app.setTab('expense')">Expense</div>
-                                    <div class="tab" id="tabInc" onclick="app.setTab('income')">Income</div>
-                                </div>
-                                <input type="hidden" id="type" value="expense">
-                                <input type="text" id="desc" class="form-control" placeholder="Description" required>
-                                <input type="number" id="amount" class="form-control" placeholder="Amount ($)" required>
-                                <select id="category" class="form-control">
-                                    <option value="Food">🍔 Food</option>
-                                    <option value="Transport">🚗 Transport</option>
-                                    <option value="Shopping">🛍️ Shopping</option>
-                                    <option value="Salary">💰 Salary</option>
-                                </select>
-                                <button type="submit" class="btn btn-primary">Add</button>
-                            </form>
-                        </div>
-
-                        <div class="card">
-                            <h4>Recent Activity</h4>
-                            <table>
-                                <thead><tr><th>Desc</th><th>Amt</th><th></th></tr></thead>
-                                <tbody id="recentTable"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-transactions" class="hidden">
-                <div class="card">
-                    <h2>History</h2>
-                    <button class="btn btn-outline small" onclick="app.nav('home')">Back</button>
-                    <table>
-                        <thead><tr><th>Date</th><th>Cat</th><th>Desc</th><th>Amt</th><th>Act</th></tr></thead>
-                        <tbody id="fullTable"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="view-account" class="hidden">
-                <div class="card small-card">
-                    <h2>Edit Profile</h2>
-                    <form id="profileForm">
-                        <label>Username</label><input type="text" id="profUser" class="form-control" disabled>
-                        <label>New Password</label><input type="password" id="profPass" class="form-control">
-                        <button type="submit" class="btn btn-primary">Save</button>
-                    </form>
-                </div>
-            </div>
-
-            <div id="view-report" class="report-view hidden">
-                <div class="report-header">
-                    <h1>Financial Statement</h1>
-                    <p>User: <span id="repUser"></span> | Date: <span id="repDate"></span></p>
-                </div>
-                <table>
-                    <thead><tr><th>Date</th><th>Cat</th><th>Desc</th><th>Amt</th></tr></thead>
-                    <tbody id="repTable"></tbody>
-                </table>
-                <h2 class="report-total">Total: <span id="repTotal"></span></h2>
-                <div class="report-actions">
-                    <button class="btn btn-primary small" onclick="window.print()">Print PDF</button>
-                    <button class="btn btn-outline small" onclick="app.nav('home')">Back</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>
+        const net = inc - exp;
+        document.getElementById('totalBalance').innerText = `$${net.toLocaleString()}`;
+        document.getElementById('totalInc').innerText = `$${inc}`;
+        document.getElementById('totalExp').innerText = `$${exp}`;
+        document.getElementById('repTotal').innerText = `$${net.toLocaleString()}`;
+        this.updateChart(cats);
+        this.checkGoal(net);
+        this.prepareReport();
+    }
+    deleteTx(id) {
+        if(confirm('Delete?')) {
+            this.transactions = this.transactions.filter(t => t.id !== id);
+            localStorage.setItem('fm_data', JSON.stringify(this.transactions));
+            this.renderData();
+        }
+    }
+    updateChart(data) {
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        if(this.chart) this.chart.destroy();
+        this.chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#ff7675','#fdcb6e','#00b894','#0984e3'] }] }
+        });
+    }
+    checkGoal(net) {
+        const pct = Math.min((net/2000)*100, 100);
+        document.getElementById('progressBar').style.width = Math.max(0, pct)+'%';
+        if(net >= 2000) {
+            document.getElementById('rewardMsg').classList.remove('hidden');
+            document.getElementById('proBadge').classList.remove('hidden');
+            if(!this.rainTriggered) { this.triggerRain(); this.rainTriggered=true; }
+        }
+    }
+    triggerRain() {
+        for(let i=0; i<40; i++) {
+            let m = document.createElement('div');
+            m.innerHTML = ['💸','💰','💎'][Math.floor(Math.random()*3)];
+            m.className='money'; m.style.left=Math.random()*100+'vw';
+            m.style.animation=`fall ${Math.random()*2+2}s linear`;
+            document.body.appendChild(m);
+            setTimeout(()=>m.remove(),4000);
+        }
+    }
+    nav(v) {
+        ['home','add','history','account','report'].forEach(i=>document.getElementById('view-'+i).classList.add('hidden'));
+        document.getElementById('view-'+v).classList.remove('hidden');
+        if(v==='account') document.getElementById('profUser').value = this.currentUser.username;
+    }
+    setTab(t) {
+        document.getElementById('type').value=t;
+        document.getElementById('tabExp').className = t==='expense'?'tab active':'tab';
+        document.getElementById('tabInc').className = t==='income'?'tab active':'tab';
+    }
+    prepareReport() {
+        document.getElementById('repUser').innerText = this.currentUser.username;
+        document.getElementById('repDate').innerText = new Date().toLocaleDateString();
+    }
+    updateProfile() {
+        const pass = document.getElementById('profPass').value;
+        if(pass) { this.currentUser.password = pass; this.updateUserRecord(); alert('Password Updated!'); }
+    }
+}
+const app = new App();
