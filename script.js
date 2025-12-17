@@ -6,60 +6,17 @@ class App {
         this.chart = null;
         this.rainTriggered = false;
         
-        this.tutStep = 0;
-        this.tutContent = [
-            { t: "Welcome!", d: "Welcome to Finance Master! Your personal wealth manager.", i: "fas fa-hand-holding-usd" },
-            { t: "Dashboard", d: "Track your Net Worth and expenses in real-time here.", i: "fas fa-chart-line" },
-            { t: "Add Data", d: "Go to 'Add Transaction' in the menu to add new Income or Expenses.", i: "fas fa-plus-circle" },
-            { t: "History", d: "View all your past records in the History tab.", i: "fas fa-list" },
-            { t: "Win Rewards", d: "Reach $2,000 Net Worth to unlock Pro status!", i: "fas fa-trophy" }
-        ];
-
         this.init();
     }
 
     init() {
-        if (this.currentUser) {
-            this.loadDashboard();
-        } else {
-            this.showAuth();
-        }
+        if (this.currentUser) this.loadDashboard();
+        else this.showAuth();
 
         document.getElementById('loginForm').addEventListener('submit', e => { e.preventDefault(); this.login(); });
         document.getElementById('registerForm').addEventListener('submit', e => { e.preventDefault(); this.register(); });
         document.getElementById('addForm').addEventListener('submit', e => { e.preventDefault(); this.addTx(); });
         document.getElementById('profileForm').addEventListener('submit', e => { e.preventDefault(); this.updateProfile(); });
-    }
-
-    // === TUTORIAL ===
-    checkTutorial() {
-        if (!this.currentUser.hasSeenTutorial) {
-            document.getElementById('tutorialOverlay').classList.remove('hidden');
-            this.renderTutorial();
-        }
-    }
-    renderTutorial() {
-        const c = this.tutContent[this.tutStep];
-        document.getElementById('tutTitle').innerText = c.t;
-        document.getElementById('tutDesc').innerText = c.d;
-        document.getElementById('tutImage').innerHTML = `<i class="${c.i}"></i>`;
-        const dots = document.querySelectorAll('.dot');
-        dots.forEach((d, i) => d.className = i === this.tutStep ? 'dot active' : 'dot');
-    }
-    nextStep() {
-        this.tutStep++;
-        if (this.tutStep >= this.tutContent.length) this.endTutorial(); else this.renderTutorial();
-    }
-    endTutorial() {
-        document.getElementById('tutorialOverlay').classList.add('hidden');
-        this.currentUser.hasSeenTutorial = true;
-        this.updateUserRecord();
-    }
-    updateUserRecord() {
-        const idx = this.users.findIndex(u => u.username === this.currentUser.username);
-        if (idx > -1) this.users[idx] = this.currentUser;
-        localStorage.setItem('fm_users', JSON.stringify(this.users));
-        sessionStorage.setItem('fm_current', JSON.stringify(this.currentUser));
     }
 
     // === AUTH ===
@@ -91,14 +48,12 @@ class App {
     showAuth() {
         document.getElementById('authScreen').classList.remove('hidden');
         document.getElementById('dashboardScreen').classList.add('hidden');
-        document.getElementById('bgVideo').play().catch(e => console.log('Autoplay blocked'));
     }
     loadDashboard() {
         document.getElementById('authScreen').classList.add('hidden');
         document.getElementById('dashboardScreen').classList.remove('hidden');
         document.getElementById('displayUser').innerText = this.currentUser.username;
         this.renderData();
-        this.checkTutorial();
     }
 
     // === DATA ===
