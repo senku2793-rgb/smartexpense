@@ -11,188 +11,235 @@ class Transaction {
 }
 
 // --- Main App Logic ---
-class MoneyApp {
+class DashboardApp {
     constructor() {
-        this.users = JSON.parse(localStorage.getItem('users')) || [];
-        this.currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+        this.currentUser = sessionStorage.getItem('currentUser');
         this.transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-        
-        // Check which page we are on
-        if (document.getElementById('loginForm')) this.initAuth();
-        if (document.getElementById('transactionList')) this.initDashboard();
-        
-        this.catColors = { 'Food':'#ffeaa7', 'Transport':'#81ecec', 'Shopping':'#fab1a0', 'Bills':'#74b9ff', 'Entertainment':'#a29bfe' };
+        this.chart = null;
+
+        // Set today's date in form
+        if(document.getElementById('date')) {
+            document.getElementById('date').valueAsDate = new Date();
+        }
+
+        this.init();
     }
 
-    // --- AUTHENTICATION LOGIC ---
-    initAuth() {
-        // Handle Login
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const user = document.getElementById('loginUser').value;
-            const pass = document.getElementById('loginPass').value;
-            
-            const foundUser = this.users.find(u => u.username === user && u.password === pass);
-            
-            if (foundUser) {
-                sessionStorage.setItem('currentUser', JSON.stringify(foundUser));
-                window.location.href = 'dashboard.html';
-            } else {
-                document.getElementById('authMsg').innerText = "Invalid Username or Password";
-            }
-        });
-
-        // Handle Register
-        document.getElementById('registerForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const user = document.getElementById('regUser').value;
-            const pass = document.getElementById('regPass').value;
-            const role = document.querySelector('input[name="role"]:checked').value;
-
-            if(this.users.find(u => u.username === user)) {
-                document.getElementById('authMsg').innerText = "Username already taken";
-                return;
-            }
-
-            this.users.push({ username: user, password: pass, role: role });
-            localStorage.setItem('users', JSON.stringify(this.users));
-            alert("Registration successful! Please login.");
-            this.toggleAuth('login');
-        });
-    }
-
-    toggleAuth(view) {
-        document.getElementById('authMsg').innerText = "";
-        if(view === 'register') {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('registerForm').classList.remove('hidden');
-            document.getElementById('formTitle').innerText = "Create Account";
+    init() {
+        // Router Logic
+        if (this.currentUser) {
+            this.switchView('dashboard');
         } else {
-            document.getElementById('registerForm').classList.add('hidden');
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('formTitle').innerText = "Welcome Back";
+            this.switchView('auth');
+        }
+
+        // Event Listeners
+        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
+        if(document.getElementById('addForm')) {
+            document.getElementById('addForm').addEventListener('submit', (e) => this.handleAddTransaction(e));
+        }
+    }
+
+    handleLogin(e) {
+        e.preventDefault();
+        const user = document.getElementById('loginUser').value;
+        if(user.length > 0) {
+            sessionStorage.setItem('currentUser', user);
+            this.currentUser = user;
+            this.switchView('dashboard');
         }
     }
 
     logout() {
         sessionStorage.removeItem('currentUser');
-        window.location.href = 'index.html';
+        this.currentUser = null;
+        this.switchView('auth');
     }
 
-    // --- DASHBOARD LOGIC ---
-    initDashboard() {
-        if (!this.currentUser) {
-            window.location.href = 'index.html';
-            return;
+    switchView(viewName) {
+        const auth = document.getElementById('authView');
+        const dash = document.getElementById('dashboardView');
+        
+        if(viewName === 'dashboard') {
+            auth.classList.add('hidden');
+            dash.classList.remove('hidden');
+            this.renderDashboard();
+        } else {
+            dash.classList.add('hidden');
+            auth.classList.remove('hidden');
         }
+    }
 
-        // Display User Info & Admin Badge
-        document.getElementById('displayUsername').innerText = this.currentUser.username;
-        if(this.currentUser.role === 'Admin') {
-            document.getElementById('adminBadge').classList.remove('hidden');
-        }
+    handleAddTransaction(e) {
+        e.preventDefault();
+        const desc = document.getElementById('desc').value;
+        const amount = document.getElementById('amount').value;
+        const category = document.getElementById('category').value;
+        const date = document.getElementById('date').value;
+        const type = document.getElementById('transType').value;
 
-        this.render();
+        const newT = new Transaction(Date.now(), desc, amount, type, category, date);
+        this.transactions.unshift(newT); // Add to top
+        localStorage.setItem('transactions', JSON.stringify(this.transactions));
 
-        // Add Transaction
-        document.getElementById('addForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const desc = document.getElementById('desc').value;
-            const amount = document.getElementById('amount').value;
-            const type = document.getElementById('type').value;
-            const category = document.getElementById('category').value;
-
-            const newT = new Transaction(Date.now(), desc, amount, type, category, new Date().toLocaleDateString());
-            this.transactions.unshift(newT);
-            localStorage.setItem('transactions', JSON.stringify(this.transactions));
-            
-            this.render();
-            toggleModal(false);
-            e.target.reset();
-        });
+        this.renderDashboard();
+        e.target.reset();
+        document.getElementById('date').valueAsDate = new Date(); // Reset date
     }
 
     deleteTransaction(id) {
-        // Admin Rule: Admins can delete anything, Users can only delete their own (Simulated here as 'all' for simplicity)
-        if(confirm("Delete this transaction?")) {
+        if(confirm('Are you sure you want to delete this?')) {
             this.transactions = this.transactions.filter(t => t.id !== id);
             localStorage.setItem('transactions', JSON.stringify(this.transactions));
-            this.render();
+            this.renderDashboard();
         }
     }
 
-    render() {
-        const list = document.getElementById('transactionList');
-        list.innerHTML = '';
-        let income = 0, expense = 0;
-        let chartData = {};
+    // --- Tab Switching Logic (Expense vs Income) ---
+    setTab(type, btn) {
+        document.getElementById('transType').value = type;
+        
+        // Update UI Tabs
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Change button color based on type
+        const submitBtn = document.querySelector('.btn-action');
+        if(type === 'income') {
+            submitBtn.style.background = '#00a65a'; // Green
+            submitBtn.innerText = 'Add Income';
+        } else {
+            submitBtn.style.background = '#3c8dbc'; // Blue
+            submitBtn.innerText = 'Add Expense';
+        }
+    }
+
+    renderDashboard() {
+        document.getElementById('displayUsername').innerText = this.currentUser;
+
+        // 1. Calculate Finances
+        let income = 0;
+        let expense = 0;
+        let catData = {};
+
+        const tbody = document.getElementById('transactionTableBody');
+        tbody.innerHTML = '';
 
         this.transactions.forEach(t => {
             if(t.type === 'income') income += t.amount;
             else {
                 expense += t.amount;
-                chartData[t.category] = (chartData[t.category] || 0) + t.amount;
+                catData[t.category] = (catData[t.category] || 0) + t.amount;
             }
 
-            const item = document.createElement('li');
-            item.className = 't-item';
-            const color = this.catColors[t.category] || '#dfe6e9';
-            
-            item.innerHTML = `
-                <div class="icon-box" style="background:${color}">
-                    <i class="fas fa-tag" style="opacity:0.6;"></i>
-                </div>
-                <div class="t-info">
-                    <h4>${t.desc}</h4>
-                    <small>${t.category} • ${t.date}</small>
-                </div>
-                <div style="font-weight:600; color:${t.type==='income'?'#00b894':'#ff7675'}">
-                    ${t.type==='income' ? '+' : '-'}${t.amount}
-                </div>
-                <i class="fas fa-trash" style="margin-left:15px; color:#b2bec3; cursor:pointer;" onclick="app.deleteTransaction(${t.id})"></i>
+            // Add Table Row
+            const row = `
+                <tr>
+                    <td>${t.date}</td>
+                    <td>
+                        <span style="font-weight:500">${t.desc}</span><br>
+                        <small style="color:#777">${t.category}</small>
+                    </td>
+                    <td class="${t.type === 'income' ? 'success' : 'danger'}">
+                        ${t.type === 'income' ? '+' : '-'} $${t.amount.toFixed(2)}
+                    </td>
+                    <td>
+                        <button class="btn-delete" onclick="app.deleteTransaction(${t.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
             `;
-            list.appendChild(item);
+            tbody.innerHTML += row;
         });
 
-        document.getElementById('totalIncome').innerText = `$${income}`;
-        document.getElementById('totalExpense').innerText = `$${expense}`;
-        document.getElementById('netBalance').innerText = `$${income - expense}`;
-        this.renderChart(chartData);
+        // 2. Update Net Worth Card
+        const netWorth = income - expense;
+        document.getElementById('netWorthDisplay').innerText = `$${netWorth.toLocaleString()}`;
+        document.getElementById('netWorthDisplay').className = netWorth >= 0 ? 'amount-large success' : 'amount-large danger';
+        
+        // Simulating "Bank" vs "Cash" (Split 70/30)
+        document.getElementById('bankDisplay').innerText = `$${(netWorth * 0.7).toLocaleString()}`;
+        document.getElementById('cashDisplay').innerText = `$${(netWorth * 0.3).toLocaleString()}`;
+        document.getElementById('totalAssetsDisplay').innerText = `$${netWorth.toLocaleString()}`;
+
+        // 3. Render Chart & Check Challenge
+        this.renderChart(catData);
+        this.updateChallenge(netWorth);
+        
+        // Re-apply gold status if they already won previously
+        if(localStorage.getItem('rewardClaimed')) {
+            this.applyGoldStatus();
+        }
+    }
+
+    // --- NEW: Bonus Challenge Logic ---
+    updateChallenge(netWorth) {
+        const goal = 2000;
+        let percent = Math.floor((netWorth / goal) * 100);
+        if (percent < 0) percent = 0;
+        if (percent > 100) percent = 100;
+
+        // Update CSS Width
+        const bar = document.getElementById('progressBar');
+        bar.style.width = percent + '%';
+        bar.innerText = percent + '%';
+
+        // Check if Goal Met
+        const rewardBox = document.getElementById('rewardSection');
+        
+        // If met AND not already claimed
+        if (netWorth >= goal) {
+            if(!localStorage.getItem('rewardClaimed')) {
+                rewardBox.classList.remove('hidden');
+            }
+        } else {
+            rewardBox.classList.add('hidden');
+        }
+    }
+
+    claimReward() {
+        localStorage.setItem('rewardClaimed', 'true');
+        document.getElementById('rewardSection').classList.add('hidden');
+        alert("🎉 Congratulations! You are now a Gold Pro User!");
+        this.applyGoldStatus();
+    }
+
+    applyGoldStatus() {
+        // Change the User Icon to Gold Crown
+        const profileIcon = document.querySelector('.user-profile i');
+        profileIcon.classList.remove('fa-user-circle');
+        profileIcon.classList.add('fa-crown', 'gold-badge');
+        
+        // Add PRO text label if not there
+        const userSpan = document.getElementById('displayUsername');
+        if(!userSpan.innerText.includes('PRO')) {
+            userSpan.innerHTML += ' <span style="background:gold; color:black; font-size:10px; padding:2px 5px; border-radius:3px;">PRO</span>';
+        }
     }
 
     renderChart(data) {
         const ctx = document.getElementById('expenseChart').getContext('2d');
-        if(window.myChart) window.myChart.destroy();
-        
-        window.myChart = new Chart(ctx, {
+        if(this.chart) this.chart.destroy();
+
+        this.chart = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(data),
                 datasets: [{
                     data: Object.values(data),
-                    backgroundColor: Object.keys(data).map(k => this.catColors[k]),
-                    borderWidth: 0
+                    backgroundColor: ['#f56954', '#00a65a', '#f39c12', '#00c0ef', '#3c8dbc'],
+                    borderWidth: 1
                 }]
             },
-            options: { cutout: '75%', plugins: { legend: { position: 'right', labels: { boxWidth: 10 } } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right' } }
+            }
         });
-    }
-
-    exportCSV() {
-        let csv = "Date,Description,Category,Type,Amount\n";
-        this.transactions.forEach(t => {
-            csv += `${t.date},${t.desc},${t.category},${t.type},${t.amount}\n`;
-        });
-        const link = document.createElement('a');
-        link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
-        link.download = 'data.csv';
-        link.click();
     }
 }
 
-// Global Helpers
-const app = new MoneyApp();
-function toggleModal(show) {
-    const modal = document.getElementById('modal');
-    show ? modal.classList.add('active') : modal.classList.remove('active');
-}
+// Initialize
+const app = new DashboardApp();
