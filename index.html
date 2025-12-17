@@ -11,42 +11,49 @@
 <body>
 
     <div id="authScreen" class="auth-wrapper">
+        <video id="bgVideo" autoplay muted loop playsinline>
+            <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-blue-and-pink-lines-996-large.mp4" type="video/mp4">
+        </video>
+
         <div id="loginCard" class="auth-card">
             <div class="auth-icon"><i class="fas fa-wallet"></i></div>
             <h2>Finance Master</h2>
-            <p>Sign in to manage your wealth.</p>
-            
+            <p>Login to your dashboard</p>
             <form id="loginForm">
-                <div class="input-box">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="loginUser" placeholder="Username" required>
-                </div>
-                <div class="input-box">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="loginPass" placeholder="Password" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Secure Login</button>
+                <div class="input-box"><i class="fas fa-user"></i><input type="text" id="loginUser" placeholder="Username" required></div>
+                <div class="input-box"><i class="fas fa-lock"></i><input type="password" id="loginPass" placeholder="Password" required></div>
+                <button type="submit" class="btn btn-primary">Sign In</button>
             </form>
             <button class="btn btn-outline" onclick="app.toggleAuth('register')">Create New Account</button>
         </div>
 
         <div id="registerCard" class="auth-card hidden">
             <div class="auth-icon success"><i class="fas fa-user-plus"></i></div>
-            <h2>Join Us</h2>
-            <p>Create a secure profile.</p>
-            
+            <h2>New Account</h2>
+            <p>Start your financial journey</p>
             <form id="registerForm">
-                <div class="input-box">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="regUser" placeholder="Choose Username" required>
-                </div>
-                <div class="input-box">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="regPass" placeholder="Choose Password" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-success">Register Now</button>
+                <div class="input-box"><i class="fas fa-user"></i><input type="text" id="regUser" placeholder="Choose Username" required></div>
+                <div class="input-box"><i class="fas fa-lock"></i><input type="password" id="regPass" placeholder="Password" required></div>
+                <button type="submit" class="btn btn-primary btn-success">Register</button>
             </form>
             <button class="btn btn-outline" onclick="app.toggleAuth('login')">Back to Login</button>
+        </div>
+    </div>
+
+    <div id="tutorialOverlay" class="tutorial-overlay hidden">
+        <div class="tutorial-card">
+            <div id="tutImage" class="tutorial-image"><i class="fas fa-hand-holding-usd"></i></div>
+            <h2 id="tutTitle">Welcome!</h2>
+            <p id="tutDesc" class="tut-text">Welcome to Finance Master.</p>
+            
+            <div class="step-dots" id="tutDots">
+                <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+
+            <div class="tut-actions">
+                <button class="btn btn-outline small" onclick="app.endTutorial()">Skip</button>
+                <button class="btn btn-primary small" onclick="app.nextStep()">Next</button>
+            </div>
         </div>
     </div>
 
@@ -57,81 +64,71 @@
             <div class="nav-item" onclick="app.nav('transactions')"><i class="fas fa-list"></i> History</div>
             <div class="nav-item" onclick="app.nav('account')"><i class="fas fa-user"></i> Account</div>
             <div class="nav-item" onclick="app.nav('report')"><i class="fas fa-file-pdf"></i> Report</div>
-            <div style="margin-top: auto;"></div>
+            <div class="spacer"></div>
             <div class="nav-item logout" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Logout</div>
         </div>
 
         <div class="main-content">
-            
             <div id="view-home">
                 <div class="header">
-                    <div class="welcome-text">
-                        <h1>Hello, <span id="displayUser">User</span>! 👋</h1>
-                        <p>Financial Overview</p>
-                    </div>
-                    <div id="proBadge" class="hidden"><i class="fas fa-crown"></i> PRO USER</div>
+                    <h1>Hello, <span id="displayUser">User</span>! 👋</h1>
+                    <div id="proBadge" class="hidden pro-badge"><i class="fas fa-crown"></i> PRO</div>
                 </div>
 
                 <div class="grid">
-                    <div class="left-col">
+                    <div>
                         <div class="card balance-card">
                             <h3>Total Net Worth</h3>
                             <h1 id="totalBalance">$0.00</h1>
                             <div class="stats-row">
-                                <div><i class="fas fa-arrow-down"></i> Inc: <span id="totalInc">$0</span></div>
-                                <div><i class="fas fa-arrow-up"></i> Exp: <span id="totalExp">$0</span></div>
+                                <span><i class="fas fa-arrow-down"></i> In: <span id="totalInc">$0</span></span>
+                                <span><i class="fas fa-arrow-up"></i> Out: <span id="totalExp">$0</span></span>
                             </div>
                         </div>
 
                         <div class="card challenge-card">
                             <div class="flex-between">
                                 <h4>🏆 Pro Challenge</h4>
-                                <button onclick="app.triggerRain()" class="btn-tiny">Test Anim</button>
+                                <button onclick="app.triggerRain()" class="btn-tiny">(Test Rain)</button>
                             </div>
-                            <p>Goal: Reach <strong>$2,000</strong> Net Worth</p>
+                            <p class="small-text">Goal: Reach <strong>$2,000</strong></p>
                             <div class="progress-bar"><div id="progressBar" class="progress-fill"></div></div>
-                            <div id="rewardMsg" class="hidden reward-text"><i class="fas fa-medal"></i> Goal Reached!</div>
+                            <div id="rewardMsg" class="hidden reward-text">Goal Reached!</div>
                         </div>
 
                         <div class="card">
-                            <h4>Expense Breakdown</h4>
+                            <h4>Expenses</h4>
                             <canvas id="expenseChart"></canvas>
                         </div>
                     </div>
 
-                    <div class="right-col">
+                    <div>
                         <div class="card">
-                            <h4>New Transaction</h4>
+                            <h4>Add Transaction</h4>
                             <form id="addForm">
                                 <div class="tab-group">
                                     <div class="tab active" id="tabExp" onclick="app.setTab('expense')">Expense</div>
                                     <div class="tab" id="tabInc" onclick="app.setTab('income')">Income</div>
                                 </div>
                                 <input type="hidden" id="type" value="expense">
-                                
-                                <div class="form-group"><input type="text" id="desc" class="form-control" placeholder="Description" required></div>
-                                <div class="form-group"><input type="number" id="amount" class="form-control" placeholder="Amount ($)" required></div>
-                                <div class="form-group">
-                                    <select id="category" class="form-control">
-                                        <option value="Food">🍔 Food</option>
-                                        <option value="Transport">🚗 Transport</option>
-                                        <option value="Shopping">🛍️ Shopping</option>
-                                        <option value="Bills">📃 Bills</option>
-                                        <option value="Salary">💰 Salary</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Add Transaction</button>
+                                <input type="text" id="desc" class="form-control" placeholder="Description" required>
+                                <input type="number" id="amount" class="form-control" placeholder="Amount ($)" required>
+                                <select id="category" class="form-control">
+                                    <option value="Food">🍔 Food</option>
+                                    <option value="Transport">🚗 Transport</option>
+                                    <option value="Shopping">🛍️ Shopping</option>
+                                    <option value="Salary">💰 Salary</option>
+                                </select>
+                                <button type="submit" class="btn btn-primary">Add</button>
                             </form>
                         </div>
 
                         <div class="card">
                             <h4>Recent Activity</h4>
-                            <div class="table-container">
-                                <table>
-                                    <thead><tr><th>Desc</th><th>Cat</th><th>Amt</th><th></th></tr></thead>
-                                    <tbody id="recentTable"></tbody>
-                                </table>
-                            </div>
+                            <table>
+                                <thead><tr><th>Desc</th><th>Amt</th><th></th></tr></thead>
+                                <tbody id="recentTable"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -139,10 +136,10 @@
 
             <div id="view-transactions" class="hidden">
                 <div class="card">
-                    <h2>Transaction History</h2>
-                    <button class="btn btn-outline" onclick="app.nav('home')">Back</button>
+                    <h2>History</h2>
+                    <button class="btn btn-outline small" onclick="app.nav('home')">Back</button>
                     <table>
-                        <thead><tr><th>Date</th><th>Cat</th><th>Desc</th><th>Type</th><th>Amt</th><th>Act</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Cat</th><th>Desc</th><th>Amt</th><th>Act</th></tr></thead>
                         <tbody id="fullTable"></tbody>
                     </table>
                 </div>
@@ -152,15 +149,9 @@
                 <div class="card small-card">
                     <h2>Edit Profile</h2>
                     <form id="profileForm">
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="profUser" class="form-control" disabled>
-                        </div>
-                        <div class="form-group">
-                            <label>New Password</label>
-                            <input type="password" id="profPass" class="form-control" placeholder="New Password">
-                        </div>
-                        <button type="submit" class="btn btn-primary">Update Password</button>
+                        <label>Username</label><input type="text" id="profUser" class="form-control" disabled>
+                        <label>New Password</label><input type="password" id="profPass" class="form-control">
+                        <button type="submit" class="btn btn-primary">Save</button>
                     </form>
                 </div>
             </div>
@@ -174,13 +165,12 @@
                     <thead><tr><th>Date</th><th>Cat</th><th>Desc</th><th>Amt</th></tr></thead>
                     <tbody id="repTable"></tbody>
                 </table>
-                <h2 class="report-total">Net Worth: <span id="repTotal"></span></h2>
+                <h2 class="report-total">Total: <span id="repTotal"></span></h2>
                 <div class="report-actions">
-                    <button class="btn btn-primary" onclick="window.print()">Print / Save PDF</button>
-                    <button class="btn btn-outline" onclick="app.nav('home')">Back</button>
+                    <button class="btn btn-primary small" onclick="window.print()">Print PDF</button>
+                    <button class="btn btn-outline small" onclick="app.nav('home')">Back</button>
                 </div>
             </div>
-
         </div>
     </div>
 
